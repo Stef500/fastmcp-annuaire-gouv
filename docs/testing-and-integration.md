@@ -3,6 +3,26 @@
 Ce document couvre toutes les methodes pour tester le serveur MCP en local et
 l'integrer avec un LLM dans le cloud.
 
+## Outils disponibles
+
+| Outil MCP | Description |
+|---|---|
+| `list_establishment_categories` | Liste toutes les categories supportees (EHPAD, IME, MAS…) |
+| `geocode_address` | Convertit une adresse texte en coordonnees GPS (via Nominatim/OSM, sans cle) |
+| `search_establishments` | Recherche des etablissements autour d'un point GPS par categorie |
+| `get_establishment_by_finess` | Recupere un etablissement par son numero FINESS |
+
+**Flux typique avec une adresse :**
+
+```
+utilisateur : "EHPAD autour du 10 rue de Rivoli, Paris"
+       └─> geocode_address("10 rue de Rivoli, Paris")
+              └─> { latitude: 48.855, longitude: 2.351 }
+                     └─> search_establishments(lat, lon, radius_km=5, category="EHPAD")
+```
+
+Le LLM orchestre automatiquement ces deux appels en une seule requete utilisateur.
+
 ## Pre-requis
 
 Une cle API ANS est necessaire pour les appels reels vers l'Annuaire Sante.
@@ -65,6 +85,12 @@ ESANTE_API_KEY=votre_cle uv run fastmcp call \
   src/annuaire_mcp/main.py \
   --target search_establishments \
   latitude=45.7640 longitude=4.8357 radius_km=10 category=IME
+
+# Geocoder une adresse (sans cle API ANS, Nominatim est public)
+ESANTE_API_KEY=votre_cle uv run fastmcp call \
+  src/annuaire_mcp/main.py \
+  --target geocode_address \
+  address="14 rue de la Paix, Paris"
 
 # Rechercher un etablissement par son numero FINESS
 ESANTE_API_KEY=votre_cle uv run fastmcp call \

@@ -1,11 +1,15 @@
 """MCP tool definitions for the Annuaire Sante server."""
 
+import httpx
 from fastmcp import FastMCP
 
 from annuaire_mcp.categories import CATEGORIES, get_category_code
 from annuaire_mcp.client import FhirClient
 from annuaire_mcp.config import get_settings
 from annuaire_mcp.models import SearchResult
+
+_NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
+_NOMINATIM_HEADERS = {"User-Agent": "fastmcp-annuaire-gouv/1.0"}
 
 
 def register_tools(mcp: FastMCP) -> None:
@@ -28,6 +32,41 @@ def register_tools(mcp: FastMCP) -> None:
         return {
             key: {"code": code, "label": label}
             for key, (code, label) in CATEGORIES.items()
+        }
+
+    @mcp.tool()
+    async def geocode_address(address: str) -> dict:
+        """Convert a French address or place name to GPS coordinates.
+
+        Uses the Nominatim geocoding service (OpenStreetMap). No API key required.
+        Call this tool first when the user provides an address instead of
+        latitude/longitude, then pass the returned coordinates to
+        ``search_establishments``.
+
+        Args:
+            address: Free-text address or place name, e.g.
+                     "14 rue de la Paix, Paris" or "Lyon".
+
+        Returns:
+            A dict with ``latitude``, ``longitude``, and ``display_name``.
+            If no result is found, returns a dict with an ``error`` key.
+        """
+        async with httpx.AsyncClient(headers=_NOMINATIM_HEADERS, timeout=10) as http:
+            response = await http.get(
+                _NOMINATIM_URL,
+                params={"q": address, "format": "json", "limit": 1, "countrycodes": "fr"},
+            )
+            response.raise_for_status()
+            results = response.json()
+
+        if not results:
+            return {"error": f"No location found for '{address}'."}
+
+        hit = results[0]
+        return {
+            "latitude": float(hit["lat"]),
+            "longitude": float(hit["lon"]),
+            "display_name": hit.get("display_name"),
         }
 
     @mcp.tool()
