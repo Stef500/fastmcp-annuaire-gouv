@@ -191,7 +191,75 @@ ESANTE_API_KEY=votre_cle uv run fastmcp install cursor \
 
 ---
 
-### Cas D — Claude.ai cloud via HTTP
+### Cas D — LM Studio (LLM local)
+
+LM Studio permet de faire tourner un LLM en local (Llama, Mistral, Qwen, etc.)
+et expose une API compatible OpenAI. Les versions recentes supportent le
+protocole MCP via stdio, ce qui permet de brancher le serveur directement.
+
+#### Etape 1 — Installer LM Studio
+
+Telecharger LM Studio depuis https://lmstudio.ai et l'installer.
+Choisir un modele avec une fenetre de contexte suffisamment grande (recommande :
+32 k tokens minimum) et de bonnes capacites d'appel d'outils (tool use),
+par exemple :
+
+- `Qwen2.5-72B-Instruct` (GGUF Q4)
+- `Mistral-Small-3.1-24B-Instruct-2503` (GGUF Q4)
+- `Meta-Llama-3.3-70B-Instruct` (GGUF Q4)
+
+#### Etape 2 — Activer le support MCP dans LM Studio
+
+Dans LM Studio :
+
+1. Aller dans **Settings > Developer**.
+2. Activer **"Enable MCP support"**.
+3. Cliquer sur **"Edit MCP config"** — cela ouvre un fichier JSON.
+
+#### Etape 3 — Ajouter le serveur MCP
+
+```json
+{
+  "mcpServers": {
+    "annuaire-sante": {
+      "command": "uv",
+      "args": [
+        "--directory", "/chemin/absolu/vers/fastmcp-annuaire-gouv",
+        "run", "python", "-m", "annuaire_mcp.main"
+      ],
+      "env": {
+        "ESANTE_API_KEY": "votre_cle_ici"
+      }
+    }
+  }
+}
+```
+
+Remplacer `/chemin/absolu/vers/fastmcp-annuaire-gouv` par le chemin reel,
+par exemple `/home/alice/fastmcp-annuaire-gouv`.
+
+#### Etape 4 — Tester
+
+Redemarrer LM Studio. Dans le chat, selectionner le modele charge puis poser
+une question qui necessite les outils :
+
+> "Trouve-moi les EHPAD a moins de 5 km de Paris (48.8566, 2.3522)."
+
+Le modele doit automatiquement appeler `search_establishments` et afficher
+les resultats.
+
+#### Conseils
+
+- Certains modeles ne gerent pas bien le tool use avec des schemas complexes.
+  Si le modele n'appelle pas les outils, essayer un modele plus grand ou
+  mieux instruction-tune.
+- LM Studio 0.3.x et superieur sont requis pour le support MCP.
+- Surveiller les logs dans **Developer > MCP logs** en cas de probleme de
+  connexion avec le serveur.
+
+---
+
+### Cas E — Claude.ai cloud via HTTP
 
 Claude.ai (abonnement Pro ou Team) peut se connecter a un serveur MCP distant
 via HTTP. Cela necessite d'exposer le serveur sur une URL publique.
@@ -300,5 +368,6 @@ volumes:
 | `fastmcp dev inspector` | Oui | Faible | Debug interactif, exploration |
 | Claude Desktop (stdio) | Oui | Faible | Usage quotidien avec Claude |
 | Claude Code | Oui | Faible | Usage en terminal |
+| LM Studio (stdio local) | Oui | Faible | LLM open-source en local |
 | Claude.ai + tunnel HTTP | Oui | Moyenne | Demo, test depuis le cloud |
 | Docker + reverse proxy | Oui | Elevee | Production |
