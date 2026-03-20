@@ -1,0 +1,11 @@
+services:
+  annuaire-mcp:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: annuaire-mcp:latest
+    env_file:
+      - .env
+    stdin_open: true
+    tty: true
+    restart: unless-stopped
