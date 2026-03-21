@@ -25,9 +25,20 @@ uv run python -m annuaire_mcp.main
 
 ## Docker
 
+Build and run locally:
+
 ```bash
 docker compose up --build
 ```
+
+Or pull the published image directly:
+
+```bash
+docker pull ghcr.io/stef500/fastmcp-annuaire-gouv:latest
+docker run -i --rm --env-file .env ghcr.io/stef500/fastmcp-annuaire-gouv:latest
+```
+
+See [Deployment](docs/deployment.md) for full local and remote usage details.
 
 ## Tests
 

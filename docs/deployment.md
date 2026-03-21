@@ -31,12 +31,50 @@ required for the stdio transport.
 
 ### Using the published image
 
-Once the GitHub Actions workflow has run, the image is published to the GitHub
-Container Registry:
+The image is automatically published to GitHub Container Registry on every push
+to `main`:
+
+```
+ghcr.io/stef500/fastmcp-annuaire-gouv:latest
+ghcr.io/stef500/fastmcp-annuaire-gouv:sha-<commit-sha>
+```
+
+#### Local usage
+
+Pull and run the image directly (requires a `.env` file with `ESANTE_API_KEY`):
 
 ```bash
-docker pull ghcr.io/<owner>/fastmcp-annuaire-gouv:latest
-docker run -i --env-file .env ghcr.io/<owner>/fastmcp-annuaire-gouv:latest
+docker pull ghcr.io/stef500/fastmcp-annuaire-gouv:latest
+docker run -i --rm --env-file .env ghcr.io/stef500/fastmcp-annuaire-gouv:latest
+```
+
+#### Remote / server usage
+
+On a remote machine, pull and run with the env variable passed inline:
+
+```bash
+docker pull ghcr.io/stef500/fastmcp-annuaire-gouv:latest
+docker run -i --rm \
+  -e ESANTE_API_KEY=<your_key> \
+  ghcr.io/stef500/fastmcp-annuaire-gouv:latest
+```
+
+Or with docker compose on the remote host, create a `docker-compose.yml`:
+
+```yaml
+services:
+  annuaire-mcp:
+    image: ghcr.io/stef500/fastmcp-annuaire-gouv:latest
+    stdin_open: true
+    tty: true
+    environment:
+      - ESANTE_API_KEY=${ESANTE_API_KEY}
+```
+
+Then:
+
+```bash
+ESANTE_API_KEY=<your_key> docker compose up
 ```
 
 ## GitHub Actions — automated build and push
@@ -72,7 +110,7 @@ The server communicates over stdio. Example configuration for Claude Desktop:
       "args": [
         "run", "-i", "--rm",
         "--env-file", "/absolute/path/.env",
-        "ghcr.io/<owner>/fastmcp-annuaire-gouv:latest"
+        "ghcr.io/stef500/fastmcp-annuaire-gouv:latest"
       ]
     }
   }
