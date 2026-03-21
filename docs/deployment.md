@@ -7,7 +7,9 @@
 - Docker and Docker Compose installed
 - An Annuaire Sante API key
 
-### Steps
+### Option 1 — Build locally
+
+Uses `docker-compose.yml`, builds the image from source:
 
 ```bash
 cp .env.example .env
@@ -16,9 +18,20 @@ cp .env.example .env
 docker compose up --build
 ```
 
+### Option 2 — Use the published image (no build required)
+
+Uses `docker-compose.ghcr.yml`, pulls the pre-built image from `ghcr.io`:
+
+```bash
+cp .env.example .env
+# Edit .env: set ESANTE_API_KEY=<your_key>
+
+docker compose -f docker-compose.ghcr.yml pull
+docker compose -f docker-compose.ghcr.yml up
+```
+
 The container starts the MCP server and listens on stdio.
-The `stdin_open: true` and `tty: true` settings in `docker-compose.yml` are
-required for the stdio transport.
+The `stdin_open: true` and `tty: true` settings are required for the stdio transport.
 
 ### Environment variables
 
