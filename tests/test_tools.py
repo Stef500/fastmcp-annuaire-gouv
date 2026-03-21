@@ -215,7 +215,12 @@ async def test_search_establishments_geocode_timeout() -> None:
     with pytest.raises(Exception, match="timed out"):
         await mcp.call_tool(
             "search_establishments",
-            {"latitude": 48.8566, "longitude": 2.3522, "radius_km": 5, "category": "EHPAD"},
+            {
+                "latitude": 48.8566,
+                "longitude": 2.3522,
+                "radius_km": 5,
+                "category": "EHPAD",
+            },
         )
 
 
@@ -235,9 +240,7 @@ async def test_list_establishment_categories() -> None:
 async def test_get_establishment_by_finess_invalid_format() -> None:
     from annuaire_mcp.main import mcp
 
-    result = await mcp.call_tool(
-        "get_establishment_by_finess", {"finess_id": "ABC123"}
-    )
+    result = await mcp.call_tool("get_establishment_by_finess", {"finess_id": "ABC123"})
     data = _parse_tool_result(result)
     assert "error" in data
     assert "Invalid FINESS" in data["error"]

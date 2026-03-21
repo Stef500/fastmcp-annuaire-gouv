@@ -44,9 +44,7 @@ def _postal_search_prefix(postal_code: str, radius_km: float) -> str:
     return _dept_prefix(postal_code)
 
 
-def register_tools(
-    mcp: FastMCP, client: FhirClient, geocoder: NominatimClient
-) -> None:
+def register_tools(mcp: FastMCP, client: FhirClient, geocoder: NominatimClient) -> None:
     """Register all MCP tools onto the server instance.
 
     Args:
@@ -87,7 +85,9 @@ def register_tools(
             If no result is found, returns a dict with an ``error`` key.
         """
         if len(address) > _ADDRESS_MAX_LEN:
-            return {"error": f"Address is too long (max {_ADDRESS_MAX_LEN} characters)."}
+            return {
+                "error": f"Address is too long (max {_ADDRESS_MAX_LEN} characters)."
+            }
 
         result = await geocoder.geocode_address(address)
         if not result:
@@ -208,7 +208,9 @@ def register_tools(
                 "error": f"Health directory API returned HTTP {exc.response.status_code}."
             }
         except httpx.RequestError:
-            return {"error": "Health directory API is unavailable. Please try again later."}
+            return {
+                "error": "Health directory API is unavailable. Please try again later."
+            }
 
         if result is None:
             return {"error": f"No establishment found for FINESS id '{finess_id}'."}

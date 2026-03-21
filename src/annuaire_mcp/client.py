@@ -107,15 +107,16 @@ class FhirClient:
         """Close the underlying HTTP client."""
         await self._http.aclose()
 
-    async def _get_with_retry(
-        self, path: str, params: dict
-    ) -> httpx.Response:
+    async def _get_with_retry(self, path: str, params: dict) -> httpx.Response:
         """GET with exponential-backoff retry on 429/503 and timeouts."""
         last_exc: Exception | None = None
         for attempt in range(_MAX_RETRIES + 1):
             try:
                 response = await self._http.get(path, params=params)
-                if response.status_code in _RETRY_STATUS_CODES and attempt < _MAX_RETRIES:
+                if (
+                    response.status_code in _RETRY_STATUS_CODES
+                    and attempt < _MAX_RETRIES
+                ):
                     delay = _RETRY_BASE_DELAY * (2**attempt)
                     logger.warning(
                         "FHIR API returned %s (attempt %d/%d), retrying in %.1f s",

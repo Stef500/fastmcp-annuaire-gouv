@@ -18,6 +18,7 @@ _NOMINATIM_HEADERS = {
 }
 _NOMINATIM_TIMEOUT = 10.0
 
+
 class NominatimClient:
     """Async HTTP client for the Nominatim geocoding API.
 
@@ -127,7 +128,9 @@ class NominatimClient:
                 "error": f"Geocoding service returned HTTP {exc.response.status_code}."
             }
         except httpx.RequestError:
-            return {"error": "Geocoding service is unavailable. Please try again later."}
+            return {
+                "error": "Geocoding service is unavailable. Please try again later."
+            }
 
         if not results:
             return {}
