@@ -134,6 +134,18 @@ It provides:
 - a form to call each tool
 - the raw and formatted response
 
+**Alternative: HTTP transport + Inspector**
+
+If you are running the server in HTTP mode, use `make inspect` instead:
+
+```bash
+# Terminal 1
+make run-http
+
+# Terminal 2
+make inspect   # opens the Inspector against http://localhost:8000/mcp
+```
+
 ---
 
 ### Via Docker locally
