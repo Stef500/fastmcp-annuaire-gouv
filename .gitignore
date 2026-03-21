@@ -1,12 +1,24 @@
+# Secrets
 .env
 .env.*
+
+# Python
 .venv/
 __pycache__/
 *.pyc
 *.pyo
-.pytest_cache/
-.ruff_cache/
+build/
 dist/
 *.egg-info/
+
+# Tests / coverage
+.pytest_cache/
 .coverage
+coverage.xml
 htmlcov/
+
+# Linters
+.ruff_cache/
+
+# macOS
+.DS_Store
