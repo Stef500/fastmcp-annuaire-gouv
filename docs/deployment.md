@@ -41,6 +41,9 @@ The `stdin_open: true` and `tty: true` settings are required for the stdio trans
 | `FHIR_BASE_URL` | no | `https://gateway.api.esante.gouv.fr/fhir/v2` | Override the FHIR base URL |
 | `HTTP_TIMEOUT` | no | `30` | Request timeout in seconds |
 | `MAX_RESULTS` | no | `50` | Maximum results per query |
+| `MCP_TRANSPORT` | no | `stdio` | Transport mode: `stdio` or `http` |
+| `MCP_HOST` | no | `127.0.0.1` | Bind address (http transport only) |
+| `MCP_PORT` | no | `8000` | Bind port (http transport only) |
 
 ### Using the published image
 

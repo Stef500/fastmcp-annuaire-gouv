@@ -1,5 +1,6 @@
 """Entry point for the Annuaire Sante MCP server."""
 
+import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -39,8 +40,20 @@ register_tools(mcp, _fhir_client, _nominatim_client)
 
 
 def run() -> None:
-    """Start the MCP server (stdio transport)."""
-    mcp.run()
+    """Start the MCP server.
+
+    Transport is controlled by the ``MCP_TRANSPORT`` environment variable:
+    - ``stdio`` (default): standard MCP transport for local clients.
+    - ``http``: HTTP transport for remote clients (e.g. Claude.ai cloud).
+      Reads ``MCP_HOST`` (default ``127.0.0.1``) and ``MCP_PORT`` (default ``8000``).
+    """
+    transport = os.getenv("MCP_TRANSPORT", "stdio")
+    if transport == "http":
+        host = os.getenv("MCP_HOST", "127.0.0.1")
+        port = int(os.getenv("MCP_PORT", "8000"))
+        mcp.run(transport="http", host=host, port=port)
+    else:
+        mcp.run()
 
 
 if __name__ == "__main__":
