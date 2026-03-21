@@ -24,13 +24,25 @@ Returns the complete list of supported establishment categories.
 
 Search for health establishments near a geographic point.
 
+> **Note — geographic approximation**: the ANS FHIR v2 API does not support
+> radius-based (`_near`) search on `Organization` resources. Geographic
+> filtering is approximated using a reverse-geocoded postal code:
+>
+> | `radius_km` | Search scope |
+> |---|---|
+> | ≤ 10 km | exact postal code (commune / arrondissement) |
+> | > 10 km | department prefix (e.g. `75` for all Paris) |
+>
+> If the exact postal code returns 0 results, the tool automatically widens
+> the search to the department prefix.
+
 **Parameters:**
 
 | Name | Type | Required | Default | Description |
 |---|---|---|---|---|
 | `latitude` | float | yes | - | WGS-84 latitude of the center point |
 | `longitude` | float | yes | - | WGS-84 longitude of the center point |
-| `radius_km` | float | yes | - | Search radius in kilometres |
+| `radius_km` | float | yes | - | Approximate radius — controls postal granularity (see note above) |
 | `category` | string | yes | - | Category key, e.g. `"EHPAD"` |
 | `max_results` | int | no | 20 | Maximum results to return (capped at `MAX_RESULTS`) |
 | `active_only` | bool | no | true | Return only active establishments |
@@ -108,7 +120,7 @@ The server wraps the **ANS FHIR v2 API**.
 - Base URL: `https://gateway.api.esante.gouv.fr/fhir/v2`
 - Resource used: `Organization`
 - Auth header: `ESANTE-API-KEY`
-- Geographic search: `_near=<lat>|<lon>|<radius>|km`
-- Category filter: `type=<system>|<code>`
+- Geographic search: `address-postalcode=<code>` (prefix match — `_near` not supported by this API)
+- Category filter: `type=<system>|<code>` (system: `TRE_R66-CategorieEtablissement`)
 
 Official documentation: https://ansforge.github.io/annuaire-sante-fhir-documentation/

@@ -23,12 +23,20 @@ def _parse_establishment(resource: dict) -> Establishment:
             finess_id = identifier.get("value")
             break
 
+    _CATEGORY_SYSTEM = (
+        "https://mos.esante.gouv.fr/NOS/TRE_R66-CategorieEtablissement"
+        "/FHIR/TRE-R66-CategorieEtablissement"
+    )
     category_code: str | None = None
     category_label: str | None = None
-    for coding in resource.get("type", [{}])[0].get("coding", []):
-        category_code = coding.get("code")
-        category_label = coding.get("display")
-        break
+    for type_entry in resource.get("type", []):
+        for coding in type_entry.get("coding", []):
+            if coding.get("system") == _CATEGORY_SYSTEM:
+                category_code = coding.get("code")
+                category_label = coding.get("display")
+                break
+        if category_code is not None:
+            break
 
     raw_address = resource.get("address", [{}])[0] if resource.get("address") else {}
     address = Address(
@@ -95,19 +103,20 @@ class FhirClient:
 
     async def search_organizations(
         self,
-        latitude: float,
-        longitude: float,
-        radius_km: float,
+        postal_code: str,
         category_code: str,
         max_results: int | None = None,
         active_only: bool = True,
     ) -> SearchResult:
-        """Search for health establishments near a geographic point.
+        """Search for health establishments by postal code prefix.
+
+        The ANS FHIR v2 API does not support geographic (_near) search on
+        Organisation resources. Geographic filtering is approximated by
+        searching on ``address-postalcode`` (prefix match).
 
         Args:
-            latitude: Latitude of the center point (WGS-84).
-            longitude: Longitude of the center point (WGS-84).
-            radius_km: Search radius in kilometres.
+            postal_code: Postal code or prefix to search within
+                         (e.g. "75014" for one arrondissement, "75" for all Paris).
             category_code: FINESS category code (e.g. "500" for EHPAD).
             max_results: Maximum number of results to return.
             active_only: If True, only return active establishments.
@@ -120,7 +129,7 @@ class FhirClient:
         """
         count = max_results or self._settings.max_results
         params: dict[str, str | int] = {
-            "_near": f"{latitude}|{longitude}|{radius_km}|km",
+            "address-postalcode": postal_code,
             "type": build_type_token(category_code),
             "_count": count,
         }

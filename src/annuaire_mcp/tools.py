@@ -9,7 +9,34 @@ from annuaire_mcp.config import get_settings
 from annuaire_mcp.models import SearchResult
 
 _NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
+_NOMINATIM_REVERSE_URL = "https://nominatim.openstreetmap.org/reverse"
 _NOMINATIM_HEADERS = {"User-Agent": "fastmcp-annuaire-gouv/1.0"}
+
+
+async def _reverse_geocode_postal(latitude: float, longitude: float) -> str | None:
+    """Return the French postal code for a GPS point using Nominatim reverse geocoding."""
+    async with httpx.AsyncClient(headers=_NOMINATIM_HEADERS, timeout=10) as http:
+        response = await http.get(
+            _NOMINATIM_REVERSE_URL,
+            params={"lat": latitude, "lon": longitude, "format": "json"},
+        )
+        response.raise_for_status()
+        data = response.json()
+    return data.get("address", {}).get("postcode")
+
+
+def _postal_search_prefix(postal_code: str, radius_km: float) -> str:
+    """Return the postal code prefix to use for the ANS API search.
+
+    - radius_km <= 10 : exact 5-digit code (commune / arrondissement)
+    - radius_km >  10 : department prefix — 3 digits for DOM/TOM (97x/98x),
+                        2 digits for mainland France
+    """
+    if radius_km <= 10:
+        return postal_code
+    if postal_code.startswith(("97", "98")):
+        return postal_code[:3]
+    return postal_code[:2]
 
 
 def register_tools(mcp: FastMCP) -> None:
@@ -80,10 +107,17 @@ def register_tools(mcp: FastMCP) -> None:
     ) -> SearchResult:
         """Search for health establishments near a geographic point.
 
+        The ANS FHIR v2 API does not support radius-based geographic search.
+        Geographic filtering is approximated by postal code:
+
+        - radius_km <= 10 : establishments in the same commune / arrondissement
+        - radius_km >  10 : establishments in the same department (broader)
+
         Args:
             latitude: Latitude of the center point (WGS-84 decimal degrees).
             longitude: Longitude of the center point (WGS-84 decimal degrees).
-            radius_km: Search radius in kilometres (e.g. 10).
+            radius_km: Approximate search radius. Controls granularity:
+                       <= 10 km → exact postal code, > 10 km → department.
             category: Establishment category key, e.g. "EHPAD", "IME", "MAS".
                       Use ``list_establishment_categories`` to see all options.
             max_results: Maximum number of results to return (default 20, max 50).
@@ -93,22 +127,44 @@ def register_tools(mcp: FastMCP) -> None:
             A SearchResult with the matching establishments and their details.
 
         Raises:
-            ValueError: If the category is not recognised.
+            ValueError: If the category is not recognised or coordinates cannot
+                        be reverse-geocoded to a postal code.
         """
         code = get_category_code(category)
         if code is None:
             valid = ", ".join(CATEGORIES.keys())
             raise ValueError(f"Unknown category '{category}'. Valid values: {valid}")
 
+        postal_code = await _reverse_geocode_postal(latitude, longitude)
+        if postal_code is None:
+            raise ValueError(
+                "Could not determine the postal code for the given coordinates. "
+                "Verify that latitude and longitude are within France."
+            )
+
+        search_code = _postal_search_prefix(postal_code, radius_km)
         bounded = min(max_results, settings.max_results)
-        return await client.search_organizations(
-            latitude=latitude,
-            longitude=longitude,
-            radius_km=radius_km,
+        result = await client.search_organizations(
+            postal_code=search_code,
             category_code=code,
             max_results=bounded,
             active_only=active_only,
         )
+        # If no results with the precise code, widen to the department prefix.
+        if result.count == 0 and len(search_code) > 2:
+            dept_code = (
+                postal_code[:3]
+                if postal_code.startswith(("97", "98"))
+                else postal_code[:2]
+            )
+            if dept_code != search_code:
+                result = await client.search_organizations(
+                    postal_code=dept_code,
+                    category_code=code,
+                    max_results=bounded,
+                    active_only=active_only,
+                )
+        return result
 
     @mcp.tool()
     async def get_establishment_by_finess(finess_id: str) -> dict:

@@ -19,9 +19,16 @@ utilisateur : "EHPAD autour du 10 rue de Rivoli, Paris"
        └─> geocode_address("10 rue de Rivoli, Paris")
               └─> { latitude: 48.855, longitude: 2.351 }
                      └─> search_establishments(lat, lon, radius_km=5, category="EHPAD")
+                            └─> reverse geocode → code postal (ex: 75001)
+                                   └─> GET /Organization?address-postalcode=75001&type=…|500
+                                          └─> si 0 résultats → retry avec préfixe dép. (75)
 ```
 
-Le LLM orchestre automatiquement ces deux appels en une seule requete utilisateur.
+Le LLM orchestre automatiquement ces appels en une seule requete utilisateur.
+
+> **Note sur la géolocalisation** : l'API ANS FHIR v2 ne supporte pas la recherche
+> par rayon (`_near`). La recherche géographique est approximée par code postal.
+> `radius_km <= 10` → code postal exact ; `radius_km > 10` → préfixe département.
 
 ## Pre-requis
 
