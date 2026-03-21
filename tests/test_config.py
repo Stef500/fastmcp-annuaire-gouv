@@ -14,6 +14,7 @@ def test_settings_defaults() -> None:
 
 
 def test_settings_custom_values() -> None:
+    # http:// is accepted with a warning (non-HTTPS is allowed for local dev)
     s = Settings(
         esante_api_key="key",
         fhir_base_url="http://localhost:8080/fhir",
@@ -22,6 +23,13 @@ def test_settings_custom_values() -> None:
     )
     assert s.fhir_base_url == "http://localhost:8080/fhir"
     assert s.max_results == 10
+
+
+def test_settings_api_key_is_secret() -> None:
+    s = Settings(esante_api_key="super-secret-key")
+    # SecretStr prevents accidental exposure in repr/str
+    assert "super-secret-key" not in repr(s)
+    assert s.esante_api_key.get_secret_value() == "super-secret-key"
 
 
 def test_settings_missing_api_key(monkeypatch: pytest.MonkeyPatch) -> None:

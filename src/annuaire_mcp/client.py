@@ -1,10 +1,14 @@
 """FHIR API client for the Annuaire Sante."""
 
+import logging
+
 import httpx
 
-from annuaire_mcp.categories import build_type_token
+from annuaire_mcp.categories import CATEGORY_SYSTEM, build_type_token
 from annuaire_mcp.config import Settings
 from annuaire_mcp.models import Address, Establishment, SearchResult, Telecom
+
+logger = logging.getLogger(__name__)
 
 
 def _parse_establishment(resource: dict) -> Establishment:
@@ -23,22 +27,19 @@ def _parse_establishment(resource: dict) -> Establishment:
             finess_id = identifier.get("value")
             break
 
-    _CATEGORY_SYSTEM = (
-        "https://mos.esante.gouv.fr/NOS/TRE_R66-CategorieEtablissement"
-        "/FHIR/TRE-R66-CategorieEtablissement"
-    )
     category_code: str | None = None
     category_label: str | None = None
     for type_entry in resource.get("type", []):
         for coding in type_entry.get("coding", []):
-            if coding.get("system") == _CATEGORY_SYSTEM:
+            if coding.get("system") == CATEGORY_SYSTEM:
                 category_code = coding.get("code")
                 category_label = coding.get("display")
                 break
         if category_code is not None:
             break
 
-    raw_address = resource.get("address", [{}])[0] if resource.get("address") else {}
+    raw_addresses = resource.get("address")
+    raw_address = raw_addresses[0] if raw_addresses else {}
     address = Address(
         line=raw_address.get("line", []),
         city=raw_address.get("city"),
@@ -91,7 +92,7 @@ class FhirClient:
         self._http = httpx.AsyncClient(
             base_url=settings.fhir_base_url,
             headers={
-                "ESANTE-API-KEY": settings.esante_api_key,
+                "ESANTE-API-KEY": settings.esante_api_key.get_secret_value(),
                 "Accept": "application/fhir+json",
             },
             timeout=settings.http_timeout,
@@ -177,4 +178,9 @@ class FhirClient:
         if not entries:
             return None
 
-        return _parse_establishment(entries[0]["resource"])
+        entry = entries[0]
+        if "resource" not in entry:
+            logger.warning("FHIR entry for FINESS %s has no 'resource' key", finess_id)
+            return None
+
+        return _parse_establishment(entry["resource"])

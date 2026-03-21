@@ -1,5 +1,8 @@
 """MCP tool definitions for the Annuaire Sante server."""
 
+import logging
+import re
+
 import httpx
 from fastmcp import FastMCP
 
@@ -8,31 +11,53 @@ from annuaire_mcp.client import FhirClient
 from annuaire_mcp.config import get_settings
 from annuaire_mcp.models import SearchResult
 
+logger = logging.getLogger(__name__)
+
 _NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 _NOMINATIM_REVERSE_URL = "https://nominatim.openstreetmap.org/reverse"
 _NOMINATIM_HEADERS = {"User-Agent": "fastmcp-annuaire-gouv/1.0"}
+_NOMINATIM_TIMEOUT = 10.0
+
+_DEPT_RADIUS_THRESHOLD_KM = 10.0
+
+_FINESS_RE = re.compile(r"^\d{9}$")
+
+_ADDRESS_MAX_LEN = 500
 
 
 async def _reverse_geocode_postal(latitude: float, longitude: float) -> str | None:
     """Return the French postal code for a GPS point using Nominatim reverse geocoding."""
-    async with httpx.AsyncClient(headers=_NOMINATIM_HEADERS, timeout=10) as http:
-        response = await http.get(
-            _NOMINATIM_REVERSE_URL,
-            params={"lat": latitude, "lon": longitude, "format": "json"},
-        )
-        response.raise_for_status()
-        data = response.json()
+    try:
+        async with httpx.AsyncClient(
+            headers=_NOMINATIM_HEADERS, timeout=_NOMINATIM_TIMEOUT
+        ) as http:
+            response = await http.get(
+                _NOMINATIM_REVERSE_URL,
+                params={"lat": latitude, "lon": longitude, "format": "json"},
+            )
+            response.raise_for_status()
+            data = response.json()
+    except httpx.TimeoutException as exc:
+        raise ValueError("Geocoding service timed out. Please try again.") from exc
+    except httpx.HTTPStatusError as exc:
+        raise ValueError(
+            f"Geocoding service returned HTTP {exc.response.status_code}."
+        ) from exc
+    except httpx.RequestError as exc:
+        raise ValueError(
+            "Geocoding service is unavailable. Please try again later."
+        ) from exc
     return data.get("address", {}).get("postcode")
 
 
 def _postal_search_prefix(postal_code: str, radius_km: float) -> str:
     """Return the postal code prefix to use for the ANS API search.
 
-    - radius_km <= 10 : exact 5-digit code (commune / arrondissement)
-    - radius_km >  10 : department prefix — 3 digits for DOM/TOM (97x/98x),
+    - radius_km <= _DEPT_RADIUS_THRESHOLD_KM : exact 5-digit code (commune / arrondissement)
+    - radius_km >  _DEPT_RADIUS_THRESHOLD_KM : department prefix — 3 digits for DOM/TOM (97x/98x),
                         2 digits for mainland France
     """
-    if radius_km <= 10:
+    if radius_km <= _DEPT_RADIUS_THRESHOLD_KM:
         return postal_code
     if postal_code.startswith(("97", "98")):
         return postal_code[:3]
@@ -78,18 +103,30 @@ def register_tools(mcp: FastMCP) -> None:
             A dict with ``latitude``, ``longitude``, and ``display_name``.
             If no result is found, returns a dict with an ``error`` key.
         """
-        async with httpx.AsyncClient(headers=_NOMINATIM_HEADERS, timeout=10) as http:
-            response = await http.get(
-                _NOMINATIM_URL,
-                params={
-                    "q": address,
-                    "format": "json",
-                    "limit": 1,
-                    "countrycodes": "fr",
-                },
-            )
-            response.raise_for_status()
-            results = response.json()
+        if len(address) > _ADDRESS_MAX_LEN:
+            return {"error": f"Address is too long (max {_ADDRESS_MAX_LEN} characters)."}
+
+        try:
+            async with httpx.AsyncClient(
+                headers=_NOMINATIM_HEADERS, timeout=_NOMINATIM_TIMEOUT
+            ) as http:
+                response = await http.get(
+                    _NOMINATIM_URL,
+                    params={
+                        "q": address,
+                        "format": "json",
+                        "limit": 1,
+                        "countrycodes": "fr",
+                    },
+                )
+                response.raise_for_status()
+                results = response.json()
+        except httpx.TimeoutException:
+            return {"error": "Geocoding service timed out. Please try again."}
+        except httpx.HTTPStatusError as exc:
+            return {"error": f"Geocoding service returned HTTP {exc.response.status_code}."}
+        except httpx.RequestError:
+            return {"error": "Geocoding service is unavailable. Please try again later."}
 
         if not results:
             return {"error": f"No location found for '{address}'."}
@@ -163,6 +200,11 @@ def register_tools(mcp: FastMCP) -> None:
                 else postal_code[:2]
             )
             if dept_code != search_code:
+                logger.info(
+                    "No results for postal code %s; widening search to department %s",
+                    search_code,
+                    dept_code,
+                )
                 result = await client.search_organizations(
                     postal_code=dept_code,
                     category_code=code,
@@ -182,6 +224,10 @@ def register_tools(mcp: FastMCP) -> None:
             A dict representing the establishment, or an error message if
             not found.
         """
+        if not _FINESS_RE.match(finess_id):
+            return {
+                "error": f"Invalid FINESS id '{finess_id}'. Expected exactly 9 digits."
+            }
         result = await client.get_organization_by_finess(finess_id)
         if result is None:
             return {"error": f"No establishment found for FINESS id '{finess_id}'."}
