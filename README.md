@@ -31,11 +31,11 @@ Build and run locally:
 docker compose up --build
 ```
 
-Or pull the published image directly:
+Or use the published image from ghcr.io (no build required):
 
 ```bash
-docker pull ghcr.io/stef500/fastmcp-annuaire-gouv:latest
-docker run -i --rm --env-file .env ghcr.io/stef500/fastmcp-annuaire-gouv:latest
+docker compose -f docker-compose.ghcr.yml pull
+docker compose -f docker-compose.ghcr.yml up
 ```
 
 See [Deployment](docs/deployment.md) for full local and remote usage details.

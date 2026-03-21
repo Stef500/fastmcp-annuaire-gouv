@@ -1,0 +1,8 @@
+services:
+  annuaire-mcp:
+    image: ghcr.io/stef500/fastmcp-annuaire-gouv:latest
+    env_file:
+      - .env
+    stdin_open: true
+    tty: true
+    restart: unless-stopped

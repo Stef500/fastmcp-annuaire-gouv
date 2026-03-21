@@ -59,22 +59,12 @@ docker run -i --rm \
   ghcr.io/stef500/fastmcp-annuaire-gouv:latest
 ```
 
-Or with docker compose on the remote host, create a `docker-compose.yml`:
-
-```yaml
-services:
-  annuaire-mcp:
-    image: ghcr.io/stef500/fastmcp-annuaire-gouv:latest
-    stdin_open: true
-    tty: true
-    environment:
-      - ESANTE_API_KEY=${ESANTE_API_KEY}
-```
-
-Then:
+Or with docker compose using the provided `docker-compose.ghcr.yml`:
 
 ```bash
-ESANTE_API_KEY=<your_key> docker compose up
+# Pull the latest image and start
+docker compose -f docker-compose.ghcr.yml pull
+docker compose -f docker-compose.ghcr.yml up
 ```
 
 ## GitHub Actions — automated build and push
