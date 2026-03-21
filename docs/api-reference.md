@@ -28,7 +28,7 @@ Convert a free-text French address into GPS coordinates using the Nominatim/Open
 
 | Name | Type | Required | Description |
 |---|---|---|---|
-| `address` | string | yes | Free-text address (e.g. `"10 rue de Rivoli, Paris"`) |
+| `address` | string | yes | Free-text address (e.g. `"10 rue de Rivoli, Paris"`); max 500 characters |
 
 **Returns:**
 

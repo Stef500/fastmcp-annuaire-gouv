@@ -58,8 +58,8 @@ LLM / MCP client (Claude Desktop, etc.)
 - All GitHub Actions steps are pinned to their commit SHA (supply-chain protection).
 - `pip-audit` runs in CI on every push to detect known vulnerabilities in dependencies.
 - HTTP timeouts are enforced on both the FHIR client and the Nominatim client.
-- The FHIR client retries automatically (exponential backoff, up to 3 attempts) on 429, 503, and timeout responses.
-- The Nominatim client enforces the 1 req/s usage policy via an asyncio lock.
+- The FHIR client retries automatically (exponential backoff `delay = 1.0 × 2ⁿ` seconds, up to 3 attempts) on 429, 503, and timeout responses.
+- The Nominatim client enforces the 1 req/s usage policy via an asyncio lock; individual requests time out after 10 seconds.
 - The reverse-geocoding cache is bounded to 1 000 entries (FIFO eviction) to avoid unbounded memory growth in long-running deployments.
 - `max_results` is capped by the server-side setting to prevent large payloads.
 - A `GET /health` endpoint is available in HTTP transport mode (`MCP_TRANSPORT=http`) and returns `{"status": "ok", "service": "annuaire-sante"}`. The Docker image ships with a matching `HEALTHCHECK` directive.
