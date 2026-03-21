@@ -6,7 +6,7 @@ import httpx
 import pytest
 import respx
 
-from annuaire_mcp.geocoder import NominatimClient, _NOMINATIM_REVERSE_URL
+from annuaire_mcp.geocoder import _NOMINATIM_REVERSE_URL, NominatimClient
 from annuaire_mcp.tools import _postal_search_prefix
 from tests.conftest import FHIR_BUNDLE_EMPTY, FHIR_BUNDLE_ONE_ORG
 

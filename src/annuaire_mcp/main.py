@@ -1,7 +1,7 @@
 """Entry point for the Annuaire Sante MCP server."""
 
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
-from typing import AsyncIterator
 
 from fastmcp import FastMCP
 
