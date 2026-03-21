@@ -5,6 +5,14 @@ import pytest
 from annuaire_mcp.config import Settings
 
 
+@pytest.fixture(autouse=True)
+def clear_geocode_cache() -> None:
+    """Clear the reverse geocoding cache before each test for mock isolation."""
+    from annuaire_mcp.main import _nominatim_client
+
+    _nominatim_client._reverse_cache.clear()
+
+
 @pytest.fixture()
 def settings() -> Settings:
     """Return a Settings instance with a dummy API key for testing."""

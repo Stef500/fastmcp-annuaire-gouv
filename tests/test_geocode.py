@@ -4,7 +4,7 @@ import httpx
 import pytest
 import respx
 
-from annuaire_mcp.tools import _NOMINATIM_URL
+from annuaire_mcp.geocoder import _NOMINATIM_URL
 
 NOMINATIM_HIT = [
     {

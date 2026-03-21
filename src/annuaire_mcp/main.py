@@ -1,11 +1,31 @@
 """Entry point for the Annuaire Sante MCP server."""
 
+from contextlib import asynccontextmanager
+from typing import AsyncIterator
+
 from fastmcp import FastMCP
 
+from annuaire_mcp.client import FhirClient
+from annuaire_mcp.config import get_settings
+from annuaire_mcp.geocoder import NominatimClient
 from annuaire_mcp.tools import register_tools
+
+_settings = get_settings()
+_fhir_client = FhirClient(_settings)
+_nominatim_client = NominatimClient()
+
+
+@asynccontextmanager
+async def _lifespan(server: FastMCP) -> AsyncIterator[None]:
+    """Gracefully close HTTP clients on server shutdown."""
+    yield
+    await _fhir_client.close()
+    await _nominatim_client.close()
+
 
 mcp = FastMCP(
     name="annuaire-sante",
+    lifespan=_lifespan,
     instructions=(
         "This server provides tools to query the French Annuaire Sante FHIR API. "
         "You can search for health and medico-social establishments (EHPAD, IME, MAS, "
@@ -15,7 +35,7 @@ mcp = FastMCP(
     ),
 )
 
-register_tools(mcp)
+register_tools(mcp, _fhir_client, _nominatim_client)
 
 
 def run() -> None:

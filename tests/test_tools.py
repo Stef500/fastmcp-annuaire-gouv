@@ -6,11 +6,8 @@ import httpx
 import pytest
 import respx
 
-from annuaire_mcp.tools import (
-    _NOMINATIM_REVERSE_URL,
-    _postal_search_prefix,
-    _reverse_geocode_postal,
-)
+from annuaire_mcp.geocoder import NominatimClient, _NOMINATIM_REVERSE_URL
+from annuaire_mcp.tools import _postal_search_prefix
 from tests.conftest import FHIR_BUNDLE_EMPTY, FHIR_BUNDLE_ONE_ORG
 
 _FHIR_ORG_URL = "https://gateway.api.esante.gouv.fr/fhir/v2/Organization"
@@ -55,7 +52,9 @@ async def test_reverse_geocode_postal_found() -> None:
     respx.get(_NOMINATIM_REVERSE_URL).mock(
         return_value=httpx.Response(200, json=_REVERSE_PARIS)
     )
-    result = await _reverse_geocode_postal(48.8566, 2.3522)
+    client = NominatimClient()
+    result = await client.reverse_geocode_postal(48.8566, 2.3522)
+    await client.close()
     assert result == "75004"
 
 
@@ -65,7 +64,9 @@ async def test_reverse_geocode_postal_missing_postcode() -> None:
     respx.get(_NOMINATIM_REVERSE_URL).mock(
         return_value=httpx.Response(200, json=_REVERSE_NO_POSTCODE)
     )
-    result = await _reverse_geocode_postal(0.0, 0.0)
+    client = NominatimClient()
+    result = await client.reverse_geocode_postal(0.0, 0.0)
+    await client.close()
     assert result is None
 
 
