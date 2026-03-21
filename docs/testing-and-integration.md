@@ -1,68 +1,68 @@
-# Tests et integration
+# Testing and integration
 
-Ce document couvre toutes les methodes pour tester le serveur MCP en local et
-l'integrer avec un LLM dans le cloud.
+This document covers all methods for testing the MCP server locally and
+integrating it with an LLM in the cloud.
 
-## Outils disponibles
+## Available tools
 
-| Outil MCP | Description |
+| MCP Tool | Description |
 |---|---|
-| `list_establishment_categories` | Liste toutes les categories supportees (EHPAD, IME, MAS…) |
-| `geocode_address` | Convertit une adresse texte en coordonnees GPS (via Nominatim/OSM, sans cle) |
-| `search_establishments` | Recherche des etablissements autour d'un point GPS par categorie |
-| `get_establishment_by_finess` | Recupere un etablissement par son numero FINESS |
+| `list_establishment_categories` | Lists all supported categories (EHPAD, IME, MAS…) |
+| `geocode_address` | Converts a text address to GPS coordinates (via Nominatim/OSM, no key required) |
+| `search_establishments` | Searches for establishments around a GPS point by category |
+| `get_establishment_by_finess` | Retrieves an establishment by its FINESS number |
 
-**Flux typique avec une adresse :**
+**Typical flow with an address:**
 
 ```
-utilisateur : "EHPAD autour du 10 rue de Rivoli, Paris"
+user: "EHPAD around 10 rue de Rivoli, Paris"
        └─> geocode_address("10 rue de Rivoli, Paris")
               └─> { latitude: 48.855, longitude: 2.351 }
                      └─> search_establishments(lat, lon, radius_km=5, category="EHPAD")
-                            └─> reverse geocode → code postal (ex: 75001)
+                            └─> reverse geocode → postal code (e.g.: 75001)
                                    └─> GET /Organization?address-postalcode=75001&type=…|500
-                                          └─> si 0 résultats → retry avec préfixe dép. (75)
+                                          └─> if 0 results → retry with department prefix (75)
 ```
 
-Le LLM orchestre automatiquement ces appels en une seule requete utilisateur.
+The LLM automatically orchestrates these calls in a single user request.
 
-> **Note sur la géolocalisation** : l'API ANS FHIR v2 ne supporte pas la recherche
-> par rayon (`_near`). La recherche géographique est approximée par code postal.
-> `radius_km <= 10` → code postal exact ; `radius_km > 10` → préfixe département.
+> **Note on geolocation**: the ANS FHIR v2 API does not support radius-based search
+> (`_near`). Geographic search is approximated by postal code.
+> `radius_km <= 10` → exact postal code ; `radius_km > 10` → department prefix.
 
-## Pre-requis
+## Prerequisites
 
-Une cle API ANS est necessaire pour les appels reels vers l'Annuaire Sante.
-Les tests unitaires (pytest) n'en ont pas besoin car ils mockent l'API.
+An ANS API key is required for real calls to the Annuaire Sante.
+Unit tests (pytest) do not need one as they mock the API.
 
-### Obtenir une cle API
+### Obtaining an API key
 
-1. Creer un compte sur le portail GRAVITEE de l'ANS :
-   https://portal.api.esante.gouv.fr (plus d'infos sur https://ansforge.github.io/annuaire-sante-fhir-documentation/pages/guide/version-2/getting-started/get-api-key.html)
-2. Creer une application pour generer une cle.
-3. Copier la valeur de la cle.
+1. Create an account on the ANS GRAVITEE portal:
+   https://portal.api.esante.gouv.fr (more information at https://ansforge.github.io/annuaire-sante-fhir-documentation/pages/guide/version-2/getting-started/get-api-key.html)
+2. Create an application to generate a key.
+3. Copy the key value.
 
-### Configurer le fichier .env
+### Configuring the .env file
 
 ```bash
 cp .env.example .env
-# Editer .env
-ESANTE_API_KEY=votre_cle_ici
+# Edit .env
+ESANTE_API_KEY=your_api_key_here
 ```
 
 ---
 
-## Tests en local
+## Local testing
 
-### Tests unitaires (sans cle API)
+### Unit tests (without API key)
 
-Les tests mockent toutes les requetes HTTP. Aucune cle reelle n'est necessaire.
+Tests mock all HTTP requests. No real key is needed.
 
 ```bash
 ESANTE_API_KEY=dummy uv run pytest tests/ -v
 ```
 
-Pour lancer uniquement un module de tests :
+To run only a specific test module:
 
 ```bash
 ESANTE_API_KEY=dummy uv run pytest tests/test_client.py -v
@@ -70,46 +70,46 @@ ESANTE_API_KEY=dummy uv run pytest tests/test_client.py -v
 
 ---
 
-### Appel direct d'un outil depuis le terminal
+### Direct tool call from the terminal
 
-La methode la plus rapide pour verifier qu'un outil fonctionne avec l'API reelle.
-`fastmcp call` demarre le serveur, appelle l'outil et affiche le resultat.
+The fastest method to verify that a tool works with the real API.
+`fastmcp call` starts the server, calls the tool and displays the result.
 
 ```bash
-# Lister les categories disponibles
-ESANTE_API_KEY=votre_cle uv run fastmcp call \
+# List available categories
+ESANTE_API_KEY=your_api_key uv run fastmcp call \
   src/annuaire_mcp/main.py \
   --target list_establishment_categories
 
-# Rechercher des EHPAD autour de Paris dans un rayon de 5 km
-ESANTE_API_KEY=votre_cle uv run fastmcp call \
+# Search for EHPADs around Paris within a 5 km radius
+ESANTE_API_KEY=your_api_key uv run fastmcp call \
   src/annuaire_mcp/main.py \
   --target search_establishments \
   latitude=48.8566 longitude=2.3522 radius_km=5 category=EHPAD max_results=5
 
-# Autres exemples de categories
-ESANTE_API_KEY=votre_cle uv run fastmcp call \
+# Other category examples
+ESANTE_API_KEY=your_api_key uv run fastmcp call \
   src/annuaire_mcp/main.py \
   --target search_establishments \
   latitude=45.7640 longitude=4.8357 radius_km=10 category=IME
 
-# Geocoder une adresse (sans cle API ANS, Nominatim est public)
-ESANTE_API_KEY=votre_cle uv run fastmcp call \
+# Geocode an address (no ANS API key needed, Nominatim is public)
+ESANTE_API_KEY=your_api_key uv run fastmcp call \
   src/annuaire_mcp/main.py \
   --target geocode_address \
   address="14 rue de la Paix, Paris"
 
-# Rechercher un etablissement par son numero FINESS
-ESANTE_API_KEY=votre_cle uv run fastmcp call \
+# Search for an establishment by its FINESS number
+ESANTE_API_KEY=your_api_key uv run fastmcp call \
   src/annuaire_mcp/main.py \
   --target get_establishment_by_finess \
   finess_id=750123456
 ```
 
-Pour obtenir la reponse en JSON brut (utile pour deboguer ou scripter) :
+To get the response as raw JSON (useful for debugging or scripting):
 
 ```bash
-ESANTE_API_KEY=votre_cle uv run fastmcp call \
+ESANTE_API_KEY=your_api_key uv run fastmcp call \
   src/annuaire_mcp/main.py \
   --target search_establishments \
   --json \
@@ -118,31 +118,31 @@ ESANTE_API_KEY=votre_cle uv run fastmcp call \
 
 ---
 
-### Inspecteur MCP interactif
+### Interactive MCP Inspector
 
-FastMCP embarque le MCP Inspector, une interface web pour explorer les outils,
-visualiser leurs schemas JSON et les appeler manuellement.
+FastMCP includes the MCP Inspector, a web interface for exploring tools,
+visualizing their JSON schemas and calling them manually.
 
 ```bash
-ESANTE_API_KEY=votre_cle uv run fastmcp dev inspector src/annuaire_mcp/main.py
+ESANTE_API_KEY=your_api_key uv run fastmcp dev inspector src/annuaire_mcp/main.py
 ```
 
-L'URL `http://localhost:6274` s'ouvre automatiquement dans le navigateur.
-On y trouve :
+The URL `http://localhost:6274` opens automatically in the browser.
+It provides:
 
-- la liste des outils avec leurs schemas de parametres
-- un formulaire pour appeler chaque outil
-- la reponse brute et formatee
+- the list of tools with their parameter schemas
+- a form to call each tool
+- the raw and formatted response
 
 ---
 
-### Via Docker en local
+### Via Docker locally
 
 ```bash
 docker compose up --build
 ```
 
-Pour envoyer une commande au conteneur depuis un autre terminal :
+To send a command to the container from another terminal:
 
 ```bash
 docker run -it --rm --env-file .env annuaire-mcp:latest
@@ -150,28 +150,28 @@ docker run -it --rm --env-file .env annuaire-mcp:latest
 
 ---
 
-## Integration avec un LLM dans le cloud
+## Integration with an LLM in the cloud
 
-### Cas A — Claude Desktop (client local, modele distant)
+### Case A — Claude Desktop (local client, remote model)
 
-Claude Desktop tourne sur votre machine et se connecte au modele Claude via
-l'API Anthropic. Le serveur MCP tourne aussi en local via stdio. C'est la
-methode la plus simple pour un usage quotidien.
+Claude Desktop runs on your machine and connects to the Claude model via
+the Anthropic API. The MCP server also runs locally via stdio. This is the
+simplest method for everyday use.
 
-**Installation automatique :**
+**Automatic installation:**
 
 ```bash
-ESANTE_API_KEY=votre_cle uv run fastmcp install claude-desktop \
+ESANTE_API_KEY=your_api_key uv run fastmcp install claude-desktop \
   src/annuaire_mcp/main.py \
   --name "annuaire-sante"
 ```
 
-**Installation manuelle :**
+**Manual installation:**
 
-Editer le fichier de configuration de Claude Desktop :
+Edit the Claude Desktop configuration file:
 
-- macOS : `~/Library/Application Support/Claude/claude_desktop_config.json`
-- Windows : `%APPDATA%\Claude\claude_desktop_config.json`
+- macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- Windows: `%APPDATA%\Claude\claude_desktop_config.json`
 
 ```json
 {
@@ -179,77 +179,77 @@ Editer le fichier de configuration de Claude Desktop :
     "annuaire-sante": {
       "command": "uv",
       "args": [
-        "--directory", "/chemin/absolu/vers/fastmcp-annuaire-gouv",
+        "--directory", "/absolute/path/to/fastmcp-annuaire-gouv",
         "run", "python", "-m", "annuaire_mcp.main"
       ],
       "env": {
-        "ESANTE_API_KEY": "votre_cle_ici"
+        "ESANTE_API_KEY": "your_api_key_here"
       }
     }
   }
 }
 ```
 
-Redemarrer Claude Desktop. Le serveur apparait dans la liste des outils (icone
-marteau). Exemples de requetes :
+Restart Claude Desktop. The server appears in the tools list (hammer icon).
+Example queries:
 
-> "Trouve-moi tous les EHPAD dans un rayon de 10 km autour de Lyon."
+> "Find all EHPADs within a 10 km radius around Lyon."
 >
-> "Quels IME se trouvent a moins de 20 km de Bordeaux (44.8378, -0.5792) ?"
+> "Which IMEs are located less than 20 km from Bordeaux (44.8378, -0.5792)?"
 >
-> "Donne-moi les informations sur l'etablissement FINESS 750123456."
+> "Give me the information for establishment FINESS 750123456."
 
 ---
 
-### Cas B — Claude Code
+### Case B — Claude Code
 
 ```bash
-ESANTE_API_KEY=votre_cle uv run fastmcp install claude-code \
+ESANTE_API_KEY=your_api_key uv run fastmcp install claude-code \
   src/annuaire_mcp/main.py \
   --name "annuaire-sante"
 ```
 
-Ou depuis Claude Code, utiliser la commande `/mcp` pour ajouter le serveur
-manuellement avec la configuration stdio.
+Or from Claude Code, use the `/mcp` command to add the server
+manually with the stdio configuration.
 
 ---
 
-### Cas C — Cursor
+### Case C — Cursor
 
 ```bash
-ESANTE_API_KEY=votre_cle uv run fastmcp install cursor \
+ESANTE_API_KEY=your_api_key uv run fastmcp install cursor \
   src/annuaire_mcp/main.py \
   --name "annuaire-sante"
 ```
 
 ---
 
-### Cas D — LM Studio (LLM local)
+### Case D — LM Studio (local LLM)
 
-LM Studio permet de faire tourner un LLM en local (Llama, Mistral, Qwen, etc.)
-et expose une API compatible OpenAI. Les versions recentes supportent le
-protocole MCP via stdio, ce qui permet de brancher le serveur directement.
+LM Studio allows running an LLM locally (Llama, Mistral, Qwen, etc.)
+and exposes an OpenAI-compatible API. Recent versions support the
+MCP protocol via stdio, which allows connecting the server directly.
 
-#### Etape 1 — Installer LM Studio
+#### Step 1 — Install LM Studio
 
-Telecharger LM Studio depuis https://lmstudio.ai et l'installer.
-Choisir un modele avec une fenetre de contexte suffisamment grande (recommande :
-32 k tokens minimum) et de bonnes capacites d'appel d'outils (tool use),
-par exemple :
+Download LM Studio from https://lmstudio.ai and install it.
+Choose a model with a sufficiently large context window (recommended:
+32k tokens minimum) and good tool use capabilities,
+for example:
 
 - `Qwen2.5-72B-Instruct` (GGUF Q4)
 - `Mistral-Small-3.1-24B-Instruct-2503` (GGUF Q4)
 - `Meta-Llama-3.3-70B-Instruct` (GGUF Q4)
 
-#### Etape 2 — Activer le support MCP dans LM Studio
+#### Step 2 — Enable MCP support in LM Studio
 
-Dans LM Studio :
+In LM Studio:
 
-1. Aller dans **Settings > Developer**.
-2. Activer **"Enable MCP support"**.
-3. Cliquer sur **"Edit MCP config"** — cela ouvre un fichier JSON.
+1. Go to **Settings > Developer**.
+2. Enable **"Enable MCP support"**.
+3. Click **"Edit MCP config"** — this opens a JSON file.
 
-#### Etape 3 — Ajouter le serveur MCP
+#### Step 3 — Add the MCP server
 
 ```json
 {
@@ -257,49 +257,49 @@ Dans LM Studio :
     "annuaire-sante": {
       "command": "uv",
       "args": [
-        "--directory", "/chemin/absolu/vers/fastmcp-annuaire-gouv",
+        "--directory", "/absolute/path/to/fastmcp-annuaire-gouv",
         "run", "python", "-m", "annuaire_mcp.main"
       ],
       "env": {
-        "ESANTE_API_KEY": "votre_cle_ici"
+        "ESANTE_API_KEY": "your_api_key_here"
       }
     }
   }
 }
 ```
 
-Remplacer `/chemin/absolu/vers/fastmcp-annuaire-gouv` par le chemin reel,
-par exemple `/home/alice/fastmcp-annuaire-gouv`.
+Replace `/absolute/path/to/fastmcp-annuaire-gouv` with the actual path,
+for example `/home/alice/fastmcp-annuaire-gouv`.
 
-#### Etape 4 — Tester
+#### Step 4 — Test
 
-Redemarrer LM Studio. Dans le chat, selectionner le modele charge puis poser
-une question qui necessite les outils :
+Restart LM Studio. In the chat, select the loaded model then ask
+a question that requires the tools:
 
-> "Trouve-moi les EHPAD a moins de 5 km de Paris (48.8566, 2.3522)."
+> "Find me EHPADs within 5 km of Paris (48.8566, 2.3522)."
 
-Le modele doit automatiquement appeler `search_establishments` et afficher
-les resultats.
+The model should automatically call `search_establishments` and display
+the results.
 
-#### Conseils
+#### Tips
 
-- Certains modeles ne gerent pas bien le tool use avec des schemas complexes.
-  Si le modele n'appelle pas les outils, essayer un modele plus grand ou
-  mieux instruction-tune.
-- LM Studio 0.3.x et superieur sont requis pour le support MCP.
-- Surveiller les logs dans **Developer > MCP logs** en cas de probleme de
-  connexion avec le serveur.
+- Some models do not handle tool use well with complex schemas.
+  If the model does not call the tools, try a larger model or one that is
+  better instruction-tuned.
+- LM Studio 0.3.x and above is required for MCP support.
+- Monitor the logs under **Developer > MCP logs** if there are connection
+  issues with the server.
 
 ---
 
-### Cas E — Claude.ai cloud via HTTP
+### Case E — Claude.ai cloud via HTTP
 
-Claude.ai (abonnement Pro ou Team) peut se connecter a un serveur MCP distant
-via HTTP. Cela necessite d'exposer le serveur sur une URL publique.
+Claude.ai (Pro or Team subscription) can connect to a remote MCP server
+via HTTP. This requires exposing the server on a public URL.
 
-#### Etape 1 — Activer le transport HTTP
+#### Step 1 — Enable HTTP transport
 
-Modifier `src/annuaire_mcp/main.py` pour supporter les deux transports :
+Modify `src/annuaire_mcp/main.py` to support both transports:
 
 ```python
 import os
@@ -315,7 +315,7 @@ def run() -> None:
         mcp.run()
 ```
 
-Ajouter dans `.env` :
+Add to `.env`:
 
 ```bash
 MCP_TRANSPORT=http
@@ -323,39 +323,39 @@ MCP_HOST=0.0.0.0
 MCP_PORT=8000
 ```
 
-Demarrer le serveur :
+Start the server:
 
 ```bash
 uv run python -m annuaire_mcp.main
 ```
 
-#### Etape 2 — Exposer le serveur publiquement (pour le developpement)
+#### Step 2 — Expose the server publicly (for development)
 
-Avec Cloudflare Tunnel (gratuit, sans compte) :
+With Cloudflare Tunnel (free, no account required):
 
 ```bash
 cloudflared tunnel --url http://localhost:8000
-# Retourne une URL du type : https://abc123.trycloudflare.com
+# Returns a URL such as: https://abc123.trycloudflare.com
 ```
 
-Avec ngrok :
+With ngrok:
 
 ```bash
 ngrok http 8000
-# Retourne une URL du type : https://abc123.ngrok-free.app
+# Returns a URL such as: https://abc123.ngrok-free.app
 ```
 
-#### Etape 3 — Ajouter le serveur dans Claude.ai
+#### Step 3 — Add the server in Claude.ai
 
-- Aller dans Parametres > Integrations > Ajouter un serveur MCP
-- URL : `https://abc123.trycloudflare.com/mcp/`
+- Go to Settings > Integrations > Add an MCP server
+- URL: `https://abc123.trycloudflare.com/mcp/`
 
-#### Deploiement en production avec Docker
+#### Production deployment with Docker
 
-Pour une exposition permanente, lancer le conteneur avec le transport HTTP et
-placer un reverse proxy (Caddy, Traefik, nginx) devant.
+For a permanent setup, run the container with HTTP transport and
+place a reverse proxy (Caddy, Traefik, nginx) in front of it.
 
-Exemple avec Caddy (`Caddyfile`) :
+Example with Caddy (`Caddyfile`):
 
 ```
 mcp.mondomaine.fr {
@@ -363,7 +363,7 @@ mcp.mondomaine.fr {
 }
 ```
 
-`docker-compose.yml` adapte :
+Adapted `docker-compose.yml`:
 
 ```yaml
 services:
@@ -392,15 +392,15 @@ volumes:
 
 ---
 
-## Recap des methodes
+## Methods summary
 
-| Methode | Cle API reelle | Complexite | Cas d'usage |
+| Method | Real API key | Complexity | Use case |
 |---|---|---|---|
-| `pytest` | Non | Minimale | CI, TDD, regression |
-| `fastmcp call` | Oui | Minimale | Smoke test rapide en CLI |
-| `fastmcp dev inspector` | Oui | Faible | Debug interactif, exploration |
-| Claude Desktop (stdio) | Oui | Faible | Usage quotidien avec Claude |
-| Claude Code | Oui | Faible | Usage en terminal |
-| LM Studio (stdio local) | Oui | Faible | LLM open-source en local |
-| Claude.ai + tunnel HTTP | Oui | Moyenne | Demo, test depuis le cloud |
-| Docker + reverse proxy | Oui | Elevee | Production |
+| `pytest` | No | Minimal | CI, TDD, regression |
+| `fastmcp call` | Yes | Minimal | Quick smoke test in CLI |
+| `fastmcp dev inspector` | Yes | Low | Interactive debugging, exploration |
+| Claude Desktop (stdio) | Yes | Low | Daily use with Claude |
+| Claude Code | Yes | Low | Terminal use |
+| LM Studio (local stdio) | Yes | Low | Open-source LLM locally |
+| Claude.ai + HTTP tunnel | Yes | Medium | Demo, testing from the cloud |
+| Docker + reverse proxy | Yes | High | Production |
