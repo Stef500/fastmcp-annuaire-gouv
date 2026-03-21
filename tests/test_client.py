@@ -43,9 +43,7 @@ async def test_search_organizations(client: FhirClient, settings: Settings) -> N
             return_value=httpx.Response(200, json=FHIR_BUNDLE_ONE_ORG)
         )
         result = await client.search_organizations(
-            latitude=48.8566,
-            longitude=2.3522,
-            radius_km=10.0,
+            postal_code="75001",
             category_code="500",
         )
 
@@ -63,9 +61,7 @@ async def test_search_organizations_empty(
             return_value=httpx.Response(200, json=FHIR_BUNDLE_EMPTY)
         )
         result = await client.search_organizations(
-            latitude=45.0,
-            longitude=2.0,
-            radius_km=5.0,
+            postal_code="45000",
             category_code="182",
         )
 
@@ -110,8 +106,6 @@ async def test_search_raises_on_http_error(
         )
         with pytest.raises(httpx.HTTPStatusError):
             await client.search_organizations(
-                latitude=48.0,
-                longitude=2.0,
-                radius_km=5.0,
+                postal_code="75001",
                 category_code="500",
             )

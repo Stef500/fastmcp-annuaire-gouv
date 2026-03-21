@@ -34,9 +34,17 @@ LLM / MCP client (Claude Desktop, etc.)
 
 1. The LLM calls `search_establishments(latitude, longitude, radius_km, category)`.
 2. `tools.py` resolves the category key to a numeric FINESS code via `categories.py`.
-3. `client.py` builds the FHIR query parameters and sends a `GET /Organization` request.
-4. The FHIR bundle is parsed: each `Organization` resource becomes an `Establishment`.
-5. A `SearchResult` is returned to the LLM as JSON.
+3. `tools.py` reverse-geocodes the coordinates to a French postal code via Nominatim.
+4. The postal code is shortened to a department prefix when `radius_km > 10`.
+5. `client.py` sends `GET /Organization?address-postalcode=<code>&type=<token>` to the ANS FHIR v2 API.
+   If the result is empty and a precise postal code was used, a second request widens the scope to the department prefix.
+6. The FHIR bundle is parsed: each `Organization` resource becomes an `Establishment`.
+   The category code is extracted from the `TRE_R66-CategorieEtablissement` type entry (the `type[]` array may contain several entries with different systems).
+7. A `SearchResult` is returned to the LLM as JSON.
+
+> **API limitation**: the ANS FHIR v2 `Organization` resource does not expose a
+> `_near` (radius-based) search parameter. Geographic filtering relies on postal
+> codes. See [api-reference.md](api-reference.md) for details.
 
 ## Security considerations
 

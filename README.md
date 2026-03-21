@@ -11,6 +11,7 @@ SSIAD, ...) of a specific category within a defined geographic radius.
 - [Architecture](docs/architecture.md)
 - [API reference](docs/api-reference.md)
 - [Deployment](docs/deployment.md)
+- [Tests et integration LLM](docs/testing-and-integration.md)
 
 ## Quick start
 
