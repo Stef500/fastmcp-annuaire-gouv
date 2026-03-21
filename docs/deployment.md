@@ -44,6 +44,7 @@ The `stdin_open: true` and `tty: true` settings are required for the stdio trans
 | `MCP_TRANSPORT` | no | `stdio` | Transport mode: `stdio` or `http` |
 | `MCP_HOST` | no | `127.0.0.1` | Bind address (http transport only) |
 | `MCP_PORT` | no | `8000` | Bind port (http transport only) |
+| `LOG_LEVEL` | no | `WARNING` | Log verbosity: `DEBUG`, `INFO`, `WARNING`, `ERROR` |
 
 ### Using the published image
 

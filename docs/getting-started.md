@@ -78,7 +78,9 @@ The repository includes a `Makefile` for the most frequent operations:
 | `make lint` | Lint with ruff (auto-fix) and check formatting |
 | `make format` | Auto-format with black |
 | `make check` | Full CI check: lint + format + tests + audit |
-| `make run` | Start the MCP server |
+| `make run` | Start the MCP server (stdio transport) |
+| `make run-http` | Start the MCP server (HTTP transport, port 8000) |
+| `make inspect` | Open MCP Inspector against the running HTTP server |
 | `make docker` | Build and run with docker compose |
 | `make docker-ghcr` | Pull and run the published image from ghcr.io |
 | `make audit` | Check dependencies for known vulnerabilities |
