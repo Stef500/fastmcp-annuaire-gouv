@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 
-.PHONY: help install test lint format check run docker docker-ghcr audit clean
+.PHONY: help install test lint format check run run-http inspect docker docker-ghcr audit clean
 
 help:
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
@@ -28,6 +28,12 @@ check: ## Run all CI checks (lint + format + tests + audit)
 
 run: ## Start the MCP server (stdio transport)
 	uv run python -m annuaire_mcp.main
+
+run-http: ## Start the MCP server (HTTP transport, default port 8000)
+	MCP_TRANSPORT=http uv run python -m annuaire_mcp.main
+
+inspect: ## Open MCP Inspector against the running HTTP server
+	npx @modelcontextprotocol/inspector http://localhost:8000/mcp
 
 docker: ## Build and run with docker compose (local image)
 	docker compose up --build

@@ -12,8 +12,7 @@ _NOMINATIM_URL = "https://nominatim.openstreetmap.org/search"
 _NOMINATIM_REVERSE_URL = "https://nominatim.openstreetmap.org/reverse"
 _NOMINATIM_HEADERS = {
     "User-Agent": (
-        "fastmcp-annuaire-gouv/1.0 "
-        "(https://github.com/Stef500/fastmcp-annuaire-gouv)"
+        "fastmcp-annuaire-gouv/1.0 (https://github.com/Stef500/fastmcp-annuaire-gouv)"
     )
 }
 _NOMINATIM_TIMEOUT = 10.0

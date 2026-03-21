@@ -1,5 +1,6 @@
 """Entry point for the Annuaire Sante MCP server."""
 
+import logging
 import os
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
@@ -46,7 +47,14 @@ def run() -> None:
     - ``stdio`` (default): standard MCP transport for local clients.
     - ``http``: HTTP transport for remote clients (e.g. Claude.ai cloud).
       Reads ``MCP_HOST`` (default ``127.0.0.1``) and ``MCP_PORT`` (default ``8000``).
+
+    Log verbosity is controlled by the ``LOG_LEVEL`` environment variable
+    (default: ``WARNING``).
     """
+    logging.basicConfig(
+        level=os.getenv("LOG_LEVEL", "WARNING").upper(),
+        format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    )
     transport = os.getenv("MCP_TRANSPORT", "stdio")
     if transport == "http":
         host = os.getenv("MCP_HOST", "127.0.0.1")
