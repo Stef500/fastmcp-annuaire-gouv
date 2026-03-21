@@ -6,7 +6,6 @@ import respx
 
 from annuaire_mcp.tools import _NOMINATIM_URL
 
-
 NOMINATIM_HIT = [
     {
         "lat": "48.8566",
