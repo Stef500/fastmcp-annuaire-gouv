@@ -19,29 +19,18 @@ SSIAD, ...) of a specific category within a defined geographic radius.
 cp .env.example .env
 # Edit .env and set ESANTE_API_KEY
 
-uv sync
-uv run python -m annuaire_mcp.main
+make install
+make run
 ```
 
-## Docker
-
-Build and run locally:
+## Common commands
 
 ```bash
-docker compose up --build
-```
-
-Or use the published image from ghcr.io (no build required):
-
-```bash
-docker compose -f docker-compose.ghcr.yml pull
-docker compose -f docker-compose.ghcr.yml up
+make test        # run tests with coverage
+make check       # full CI check (lint + format + tests + audit)
+make docker      # build and run with docker compose
+make docker-ghcr # pull and run the published image from ghcr.io
+make clean       # remove build artefacts and caches
 ```
 
 See [Deployment](docs/deployment.md) for full local and remote usage details.
-
-## Tests
-
-```bash
-uv run pytest tests/ -v
-```

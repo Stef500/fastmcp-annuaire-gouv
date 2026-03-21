@@ -24,13 +24,15 @@ cd fastmcp-annuaire-gouv
 cp .env.example .env
 # Open .env and set ESANTE_API_KEY=<your_key>
 
-uv sync
+make install
 ```
+
+`make install` runs `uv sync` and activates the pre-commit hooks.
 
 ## Running locally
 
 ```bash
-uv run python -m annuaire_mcp.main
+make run
 ```
 
 The server communicates over stdio, which is the standard transport for MCP
@@ -60,35 +62,32 @@ Add the following to your `claude_desktop_config.json`:
 ## Running with Docker
 
 ```bash
-docker compose up --build
+make docker
 ```
 
 See [deployment documentation](deployment.md) for full Docker instructions.
 
-## Running tests
+## Common commands
 
-```bash
-uv run pytest tests/ -v
-```
+The repository includes a `Makefile` for the most frequent operations:
 
-## Code quality
-
-```bash
-uv run ruff check src/ tests/
-uv run black src/ tests/
-```
+| Command | Description |
+|---|---|
+| `make install` | Install dependencies and activate pre-commit hooks |
+| `make test` | Run the test suite with coverage |
+| `make lint` | Lint with ruff (auto-fix) and check formatting |
+| `make format` | Auto-format with black |
+| `make check` | Full CI check: lint + format + tests + audit |
+| `make run` | Start the MCP server |
+| `make docker` | Build and run with docker compose |
+| `make docker-ghcr` | Pull and run the published image from ghcr.io |
+| `make audit` | Check dependencies for known vulnerabilities |
+| `make clean` | Remove build artefacts and cache directories |
 
 ## Pre-commit hooks
 
 The repository ships with a `pre-commit` configuration that runs `ruff` and
-`black` automatically before every commit.
+`black` automatically before every commit. Hooks are activated by `make install`.
 
-Activate the hooks once after cloning:
-
-```bash
-uv run pre-commit install
-```
-
-From that point on, every `git commit` will lint and format the staged files.
 If a hook modifies files, the commit is aborted; re-stage the changes and
 commit again.
