@@ -9,10 +9,11 @@ LLM / MCP client (Claude Desktop, etc.)
   annuaire_mcp.main     <- FastMCP server entry point
         |
   annuaire_mcp.tools    <- MCP tool definitions
-        |
-  annuaire_mcp.client   <- Async FHIR HTTP client (httpx)
-        |
-  annuaire_mcp.models   <- Pydantic domain models
+        |               \
+  annuaire_mcp.client   <- Async FHIR HTTP client (httpx, retry)
+        |                annuaire_mcp.geocoder <- Nominatim client (httpx, rate-limited)
+        |                        |
+  annuaire_mcp.models   <- Pydantic domain models          Nominatim / OSM
   annuaire_mcp.categories <- FINESS code registry
   annuaire_mcp.config   <- Settings (pydantic-settings, .env)
         |
@@ -23,12 +24,13 @@ LLM / MCP client (Claude Desktop, etc.)
 
 | Module | Responsibility |
 |---|---|
-| `main.py` | Creates the `FastMCP` instance, registers tools, defines the `run()` entry point |
+| `main.py` | Creates the `FastMCP` instance, instantiates shared clients, registers tools, manages lifespan |
 | `tools.py` | Declares the four MCP tools exposed to the LLM |
-| `client.py` | Wraps `httpx.AsyncClient` to call the FHIR API, parses FHIR resources |
+| `client.py` | Wraps `httpx.AsyncClient` to call the FHIR API; parses FHIR resources; retries on 429/503/timeout |
+| `geocoder.py` | Nominatim geocoding client: forward (`geocode_address`) and reverse (`reverse_geocode_postal`); in-process cache; 1 req/s rate limit |
 | `models.py` | Pydantic models (`Establishment`, `SearchResult`, `Address`, `Telecom`) |
 | `categories.py` | Maps human-readable category keys to FINESS codes and builds FHIR type tokens |
-| `config.py` | `pydantic-settings` `Settings` class; reads from `.env` |
+| `config.py` | `pydantic-settings` `Settings` class; `SecretStr` API key; reads from `.env` |
 
 ## Data flow for a search request
 
@@ -48,9 +50,14 @@ LLM / MCP client (Claude Desktop, etc.)
 
 ## Security considerations
 
-- The API key is never stored in code. It is read exclusively from the environment
-  or `.env` file via `pydantic-settings`.
+- The API key is typed as `SecretStr` (pydantic): it never appears in logs or `repr()` output.
+  It is read exclusively from the environment or `.env` file via `pydantic-settings`.
 - The `.env` file is excluded from version control via `.gitignore`.
 - The Docker image runs as a non-root user (`appuser`).
-- HTTP timeouts are enforced to prevent indefinite blocking.
+- Base images in the `Dockerfile` are pinned to their SHA256 digest (supply-chain protection).
+- All GitHub Actions steps are pinned to their commit SHA (supply-chain protection).
+- `pip-audit` runs in CI on every push to detect known vulnerabilities in dependencies.
+- HTTP timeouts are enforced on both the FHIR client and the Nominatim client.
+- The FHIR client retries automatically (exponential backoff, up to 3 attempts) on 429, 503, and timeout responses.
+- The Nominatim client enforces the 1 req/s usage policy via an asyncio lock.
 - `max_results` is capped by the server-side setting to prevent large payloads.

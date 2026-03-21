@@ -85,7 +85,7 @@ docker compose -f docker-compose.ghcr.yml up
 The workflow in `.github/workflows/docker-publish.yml` runs on every push to
 `main`. It:
 
-1. Runs the test suite (pytest + ruff + black checks).
+1. Runs the test suite (pytest + ruff + black checks) and audits dependencies with `pip-audit`.
 2. Builds the Docker image using Buildx with GitHub Actions cache.
 3. Pushes to GitHub Container Registry (`ghcr.io`) with two tags:
    - `latest` (always points to the last successful main build)
