@@ -24,7 +24,7 @@ LLM / MCP client (Claude Desktop, etc.)
 | Module | Responsibility |
 |---|---|
 | `main.py` | Creates the `FastMCP` instance, registers tools, defines the `run()` entry point |
-| `tools.py` | Declares the three MCP tools exposed to the LLM |
+| `tools.py` | Declares the four MCP tools exposed to the LLM |
 | `client.py` | Wraps `httpx.AsyncClient` to call the FHIR API, parses FHIR resources |
 | `models.py` | Pydantic models (`Establishment`, `SearchResult`, `Address`, `Telecom`) |
 | `categories.py` | Maps human-readable category keys to FINESS codes and builds FHIR type tokens |

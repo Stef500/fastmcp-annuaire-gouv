@@ -20,6 +20,32 @@ Returns the complete list of supported establishment categories.
 
 ---
 
+### `geocode_address`
+
+Convert a free-text French address into GPS coordinates using the Nominatim/OpenStreetMap geocoder. No API key required.
+
+**Parameters:**
+
+| Name | Type | Required | Description |
+|---|---|---|---|
+| `address` | string | yes | Free-text address (e.g. `"10 rue de Rivoli, Paris"`) |
+
+**Returns:**
+
+```json
+{
+  "latitude": 48.855,
+  "longitude": 2.351,
+  "display_name": "10 Rue de Rivoli, Paris, Île-de-France, France"
+}
+```
+
+Returns `{"error": "..."}` if no result is found.
+
+> **Note**: this tool calls the public Nominatim API (rate-limited to 1 req/s). It is intended as a convenience step before calling `search_establishments` when the user provides an address instead of coordinates.
+
+---
+
 ### `search_establishments`
 
 Search for health establishments near a geographic point.

@@ -8,7 +8,7 @@
 
 ## Obtain an API key
 
-1. Create an account on the ANS API portal: https://gateway.api.esante.gouv.fr
+1. Create an account on the ANS API portal: https://portal.api.esante.gouv.fr
 2. Log in to GRAVITEE, the API management platform.
 3. Create an application to generate your API key.
 4. Copy the key value.
@@ -45,8 +45,10 @@ Add the following to your `claude_desktop_config.json`:
   "mcpServers": {
     "annuaire-sante": {
       "command": "uv",
-      "args": ["run", "python", "-m", "annuaire_mcp.main"],
-      "cwd": "/absolute/path/to/fastmcp-annuaire-gouv",
+      "args": [
+        "--directory", "/absolute/path/to/fastmcp-annuaire-gouv",
+        "run", "python", "-m", "annuaire_mcp.main"
+      ],
       "env": {
         "ESANTE_API_KEY": "your_api_key_here"
       }

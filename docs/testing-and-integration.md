@@ -368,7 +368,7 @@ mcp.mondomaine.fr {
 ```yaml
 services:
   annuaire-mcp:
-    image: ghcr.io/<owner>/fastmcp-annuaire-gouv:latest
+    image: ghcr.io/stef500/fastmcp-annuaire-gouv:latest
     env_file: .env
     environment:
       MCP_TRANSPORT: http
