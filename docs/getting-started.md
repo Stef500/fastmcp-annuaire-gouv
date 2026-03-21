@@ -77,3 +77,18 @@ uv run pytest tests/ -v
 uv run ruff check src/ tests/
 uv run black src/ tests/
 ```
+
+## Pre-commit hooks
+
+The repository ships with a `pre-commit` configuration that runs `ruff` and
+`black` automatically before every commit.
+
+Activate the hooks once after cloning:
+
+```bash
+uv run pre-commit install
+```
+
+From that point on, every `git commit` will lint and format the staged files.
+If a hook modifies files, the commit is aborted; re-stage the changes and
+commit again.
