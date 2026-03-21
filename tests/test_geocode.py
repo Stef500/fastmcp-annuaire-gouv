@@ -1,8 +1,8 @@
 """Tests for the geocode_address MCP tool."""
 
+import httpx
 import pytest
 import respx
-import httpx
 
 from annuaire_mcp.tools import _NOMINATIM_URL
 
