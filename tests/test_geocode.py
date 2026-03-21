@@ -50,3 +50,29 @@ async def test_geocode_address_not_found() -> None:
     result = await mcp.call_tool("geocode_address", {"address": "zzz-inexistant-zzz"})
     parsed = _parse_result(result)
     assert "error" in parsed
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_geocode_address_timeout() -> None:
+    respx.get(_NOMINATIM_URL).mock(side_effect=httpx.TimeoutException("timed out"))
+
+    from annuaire_mcp.main import mcp
+
+    result = await mcp.call_tool("geocode_address", {"address": "Paris"})
+    parsed = _parse_result(result)
+    assert "error" in parsed
+    assert "timed out" in parsed["error"].lower()
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_geocode_address_network_error() -> None:
+    respx.get(_NOMINATIM_URL).mock(side_effect=httpx.RequestError("network error"))
+
+    from annuaire_mcp.main import mcp
+
+    result = await mcp.call_tool("geocode_address", {"address": "Paris"})
+    parsed = _parse_result(result)
+    assert "error" in parsed
+    assert "unavailable" in parsed["error"].lower()

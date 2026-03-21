@@ -1,6 +1,8 @@
 """Nominatim geocoding client for the Annuaire Sante server."""
 
+import asyncio
 import logging
+import time
 
 import httpx
 
@@ -23,7 +25,7 @@ class NominatimClient:
     an in-process cache for reverse geocoding results.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, min_request_interval: float = 1.0) -> None:
         self._http = httpx.AsyncClient(
             headers=_NOMINATIM_HEADERS,
             timeout=_NOMINATIM_TIMEOUT,
@@ -31,10 +33,23 @@ class NominatimClient:
         # In-process cache: (lat, lon) rounded to 4 dp → postal code.
         # Eliminates repeated Nominatim round-trips for identical coordinates.
         self._reverse_cache: dict[tuple[float, float], str | None] = {}
+        # Rate limiting: Nominatim usage policy requires at most 1 req/s.
+        self._min_request_interval = min_request_interval
+        self._last_request_time: float = 0.0
+        self._rate_limit_lock = asyncio.Lock()
 
     async def close(self) -> None:
         """Close the underlying HTTP client."""
         await self._http.aclose()
+
+    async def _rate_limit(self) -> None:
+        """Enforce the minimum interval between outgoing requests."""
+        async with self._rate_limit_lock:
+            elapsed = time.monotonic() - self._last_request_time
+            wait = self._min_request_interval - elapsed
+            if wait > 0:
+                await asyncio.sleep(wait)
+            self._last_request_time = time.monotonic()
 
     async def reverse_geocode_postal(
         self, latitude: float, longitude: float
@@ -60,6 +75,7 @@ class NominatimClient:
             return self._reverse_cache[cache_key]
 
         try:
+            await self._rate_limit()
             response = await self._http.get(
                 _NOMINATIM_REVERSE_URL,
                 params={"lat": latitude, "lon": longitude, "format": "json"},
@@ -92,6 +108,7 @@ class NominatimClient:
             or a dict with an ``error`` key on failure.
         """
         try:
+            await self._rate_limit()
             response = await self._http.get(
                 _NOMINATIM_URL,
                 params={

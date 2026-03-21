@@ -7,10 +7,11 @@ from annuaire_mcp.config import Settings
 
 @pytest.fixture(autouse=True)
 def clear_geocode_cache() -> None:
-    """Clear the reverse geocoding cache before each test for mock isolation."""
+    """Clear the reverse geocoding cache and rate-limit state before each test."""
     from annuaire_mcp.main import _nominatim_client
 
     _nominatim_client._reverse_cache.clear()
+    _nominatim_client._last_request_time = 0.0
 
 
 @pytest.fixture()

@@ -200,3 +200,61 @@ async def test_search_establishments_invalid_category() -> None:
                 "category": "UNKNOWN",
             },
         )
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_search_establishments_geocode_timeout() -> None:
+    """When reverse geocoding times out, search_establishments raises ValueError."""
+    respx.get(_NOMINATIM_REVERSE_URL).mock(
+        side_effect=httpx.TimeoutException("timed out")
+    )
+
+    from annuaire_mcp.main import mcp
+
+    with pytest.raises(Exception, match="timed out"):
+        await mcp.call_tool(
+            "search_establishments",
+            {"latitude": 48.8566, "longitude": 2.3522, "radius_km": 5, "category": "EHPAD"},
+        )
+
+
+@pytest.mark.asyncio
+async def test_list_establishment_categories() -> None:
+    from annuaire_mcp.categories import CATEGORIES
+    from annuaire_mcp.main import mcp
+
+    result = await mcp.call_tool("list_establishment_categories", {})
+    data = _parse_tool_result(result)
+    assert "EHPAD" in data
+    assert data["EHPAD"]["code"] == "500"
+    assert len(data) == len(CATEGORIES)
+
+
+@pytest.mark.asyncio
+async def test_get_establishment_by_finess_invalid_format() -> None:
+    from annuaire_mcp.main import mcp
+
+    result = await mcp.call_tool(
+        "get_establishment_by_finess", {"finess_id": "ABC123"}
+    )
+    data = _parse_tool_result(result)
+    assert "error" in data
+    assert "Invalid FINESS" in data["error"]
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_get_establishment_by_finess_not_found() -> None:
+    respx.get(_FHIR_ORG_URL).mock(
+        return_value=httpx.Response(200, json=FHIR_BUNDLE_EMPTY)
+    )
+
+    from annuaire_mcp.main import mcp
+
+    result = await mcp.call_tool(
+        "get_establishment_by_finess", {"finess_id": "750123456"}
+    )
+    data = _parse_tool_result(result)
+    assert "error" in data
+    assert "750123456" in data["error"]

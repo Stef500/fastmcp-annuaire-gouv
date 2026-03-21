@@ -1,5 +1,6 @@
 """FHIR API client for the Annuaire Sante."""
 
+import asyncio
 import logging
 
 import httpx
@@ -9,6 +10,10 @@ from annuaire_mcp.config import Settings
 from annuaire_mcp.models import Address, Establishment, SearchResult, Telecom
 
 logger = logging.getLogger(__name__)
+
+_RETRY_STATUS_CODES: frozenset[int] = frozenset({429, 503})
+_MAX_RETRIES = 3
+_RETRY_BASE_DELAY = 1.0
 
 
 def _parse_establishment(resource: dict) -> Establishment:
@@ -102,6 +107,42 @@ class FhirClient:
         """Close the underlying HTTP client."""
         await self._http.aclose()
 
+    async def _get_with_retry(
+        self, path: str, params: dict
+    ) -> httpx.Response:
+        """GET with exponential-backoff retry on 429/503 and timeouts."""
+        last_exc: Exception | None = None
+        for attempt in range(_MAX_RETRIES + 1):
+            try:
+                response = await self._http.get(path, params=params)
+                if response.status_code in _RETRY_STATUS_CODES and attempt < _MAX_RETRIES:
+                    delay = _RETRY_BASE_DELAY * (2**attempt)
+                    logger.warning(
+                        "FHIR API returned %s (attempt %d/%d), retrying in %.1f s",
+                        response.status_code,
+                        attempt + 1,
+                        _MAX_RETRIES,
+                        delay,
+                    )
+                    await asyncio.sleep(delay)
+                    continue
+                response.raise_for_status()
+                return response
+            except httpx.TimeoutException as exc:
+                last_exc = exc
+                if attempt < _MAX_RETRIES:
+                    delay = _RETRY_BASE_DELAY * (2**attempt)
+                    logger.warning(
+                        "FHIR API timed out (attempt %d/%d), retrying in %.1f s",
+                        attempt + 1,
+                        _MAX_RETRIES,
+                        delay,
+                    )
+                    await asyncio.sleep(delay)
+                else:
+                    raise
+        raise last_exc  # type: ignore[misc]
+
     async def search_organizations(
         self,
         postal_code: str,
@@ -137,8 +178,7 @@ class FhirClient:
         if active_only:
             params["active"] = "true"
 
-        response = await self._http.get("/Organization", params=params)
-        response.raise_for_status()
+        response = await self._get_with_retry("/Organization", params=params)
 
         bundle = response.json()
         entries = bundle.get("entry", [])
@@ -170,8 +210,7 @@ class FhirClient:
             "identifier": f"https://finess.esante.gouv.fr|{finess_id}",
             "_count": 1,
         }
-        response = await self._http.get("/Organization", params=params)
-        response.raise_for_status()
+        response = await self._get_with_retry("/Organization", params=params)
 
         bundle = response.json()
         entries = bundle.get("entry", [])
