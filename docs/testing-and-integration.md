@@ -31,7 +31,7 @@ Les tests unitaires (pytest) n'en ont pas besoin car ils mockent l'API.
 ### Obtenir une cle API
 
 1. Creer un compte sur le portail GRAVITEE de l'ANS :
-   https://gateway.api.esante.gouv.fr
+   https://portal.api.esante.gouv.fr
 2. Creer une application pour generer une cle.
 3. Copier la valeur de la cle.
 
