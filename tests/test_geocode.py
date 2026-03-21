@@ -19,6 +19,7 @@ NOMINATIM_EMPTY: list = []
 
 def _parse_result(result) -> dict:
     import json
+
     text = result.content[0].text
     return json.loads(text)
 
@@ -26,9 +27,7 @@ def _parse_result(result) -> dict:
 @pytest.mark.asyncio
 @respx.mock
 async def test_geocode_address_found() -> None:
-    respx.get(_NOMINATIM_URL).mock(
-        return_value=httpx.Response(200, json=NOMINATIM_HIT)
-    )
+    respx.get(_NOMINATIM_URL).mock(return_value=httpx.Response(200, json=NOMINATIM_HIT))
 
     from annuaire_mcp.main import mcp
 

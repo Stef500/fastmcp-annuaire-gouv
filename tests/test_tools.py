@@ -173,7 +173,12 @@ async def test_search_establishments_no_fallback_when_large_radius() -> None:
 
     result = await mcp.call_tool(
         "search_establishments",
-        {"latitude": 48.8566, "longitude": 2.3522, "radius_km": 20, "category": "EHPAD"},
+        {
+            "latitude": 48.8566,
+            "longitude": 2.3522,
+            "radius_km": 20,
+            "category": "EHPAD",
+        },
     )
     data = _parse_tool_result(result)
     assert data["count"] == 1
@@ -187,5 +192,10 @@ async def test_search_establishments_invalid_category() -> None:
     with pytest.raises(Exception, match="Unknown category"):
         await mcp.call_tool(
             "search_establishments",
-            {"latitude": 48.8566, "longitude": 2.3522, "radius_km": 5, "category": "UNKNOWN"},
+            {
+                "latitude": 48.8566,
+                "longitude": 2.3522,
+                "radius_km": 5,
+                "category": "UNKNOWN",
+            },
         )

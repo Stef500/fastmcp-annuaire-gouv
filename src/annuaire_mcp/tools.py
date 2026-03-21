@@ -81,7 +81,12 @@ def register_tools(mcp: FastMCP) -> None:
         async with httpx.AsyncClient(headers=_NOMINATIM_HEADERS, timeout=10) as http:
             response = await http.get(
                 _NOMINATIM_URL,
-                params={"q": address, "format": "json", "limit": 1, "countrycodes": "fr"},
+                params={
+                    "q": address,
+                    "format": "json",
+                    "limit": 1,
+                    "countrycodes": "fr",
+                },
             )
             response.raise_for_status()
             results = response.json()
