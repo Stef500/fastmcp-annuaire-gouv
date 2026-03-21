@@ -195,11 +195,14 @@ class FhirClient:
             establishments=establishments,
         )
 
-    async def get_organization_by_finess(self, finess_id: str) -> Establishment | None:
+    async def get_organization_by_finess(
+        self, finess_id: str, active_only: bool = False
+    ) -> Establishment | None:
         """Retrieve a single establishment by its FINESS identifier.
 
         Args:
             finess_id: The FINESS geographic entity number.
+            active_only: If True, only return the establishment if it is active.
 
         Returns:
             An Establishment, or None if not found.
@@ -207,10 +210,12 @@ class FhirClient:
         Raises:
             httpx.HTTPStatusError: If the API returns a non-2xx status.
         """
-        params = {
+        params: dict[str, str | int] = {
             "identifier": f"https://finess.esante.gouv.fr|{finess_id}",
             "_count": 1,
         }
+        if active_only:
+            params["active"] = "true"
         response = await self._get_with_retry("/Organization", params=params)
 
         bundle = response.json()

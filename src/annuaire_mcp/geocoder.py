@@ -25,14 +25,18 @@ class NominatimClient:
     an in-process cache for reverse geocoding results.
     """
 
-    def __init__(self, min_request_interval: float = 1.0) -> None:
+    def __init__(
+        self, min_request_interval: float = 1.0, max_cache_size: int = 1000
+    ) -> None:
         self._http = httpx.AsyncClient(
             headers=_NOMINATIM_HEADERS,
             timeout=_NOMINATIM_TIMEOUT,
         )
         # In-process cache: (lat, lon) rounded to 4 dp → postal code.
         # Eliminates repeated Nominatim round-trips for identical coordinates.
+        # Bounded to max_cache_size entries; oldest entry evicted on overflow.
         self._reverse_cache: dict[tuple[float, float], str | None] = {}
+        self._max_cache_size = max_cache_size
         # Rate limiting: Nominatim usage policy requires at most 1 req/s.
         self._min_request_interval = min_request_interval
         self._last_request_time: float = 0.0
@@ -95,6 +99,8 @@ class NominatimClient:
 
         postal_code = data.get("address", {}).get("postcode")
         self._reverse_cache[cache_key] = postal_code
+        if len(self._reverse_cache) > self._max_cache_size:
+            self._reverse_cache.pop(next(iter(self._reverse_cache)))
         return postal_code
 
     async def geocode_address(self, address: str) -> dict:

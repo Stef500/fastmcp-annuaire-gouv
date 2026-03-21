@@ -109,3 +109,91 @@ async def test_search_raises_on_http_error(
                 postal_code="75001",
                 category_code="500",
             )
+
+
+@pytest.mark.asyncio
+async def test_retry_on_429_then_success(
+    client: FhirClient, settings: Settings
+) -> None:
+    """A 429 response triggers a retry; subsequent success is returned."""
+    with respx.mock(base_url=settings.fhir_base_url) as mock:
+        route = mock.get("/Organization")
+        route.side_effect = [
+            httpx.Response(429, json={}),
+            httpx.Response(200, json=FHIR_BUNDLE_ONE_ORG),
+        ]
+        result = await client.search_organizations(
+            postal_code="75001",
+            category_code="500",
+        )
+
+    assert result.count == 1
+    assert route.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_retry_on_503_then_success(
+    client: FhirClient, settings: Settings
+) -> None:
+    """A 503 response triggers a retry; subsequent success is returned."""
+    with respx.mock(base_url=settings.fhir_base_url) as mock:
+        route = mock.get("/Organization")
+        route.side_effect = [
+            httpx.Response(503, json={}),
+            httpx.Response(200, json=FHIR_BUNDLE_ONE_ORG),
+        ]
+        result = await client.search_organizations(
+            postal_code="75001",
+            category_code="500",
+        )
+
+    assert result.count == 1
+    assert route.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_retry_exhausted_raises(client: FhirClient, settings: Settings) -> None:
+    """After all retries, the last 429 raises HTTPStatusError."""
+    with respx.mock(base_url=settings.fhir_base_url) as mock:
+        mock.get("/Organization").mock(return_value=httpx.Response(429, json={}))
+        with pytest.raises(httpx.HTTPStatusError) as exc_info:
+            await client.search_organizations(
+                postal_code="75001",
+                category_code="500",
+            )
+
+    assert exc_info.value.response.status_code == 429
+
+
+@pytest.mark.asyncio
+async def test_retry_on_timeout_then_success(
+    client: FhirClient, settings: Settings
+) -> None:
+    """A timeout triggers a retry; subsequent success is returned."""
+    with respx.mock(base_url=settings.fhir_base_url) as mock:
+        route = mock.get("/Organization")
+        route.side_effect = [
+            httpx.TimeoutException("timed out"),
+            httpx.Response(200, json=FHIR_BUNDLE_ONE_ORG),
+        ]
+        result = await client.search_organizations(
+            postal_code="75001",
+            category_code="500",
+        )
+
+    assert result.count == 1
+    assert route.call_count == 2
+
+
+@pytest.mark.asyncio
+async def test_get_organization_by_finess_active_only(
+    client: FhirClient, settings: Settings
+) -> None:
+    """active_only=True adds active=true to FHIR query params."""
+    with respx.mock(base_url=settings.fhir_base_url) as mock:
+        route = mock.get("/Organization").mock(
+            return_value=httpx.Response(200, json=FHIR_BUNDLE_ONE_ORG)
+        )
+        await client.get_organization_by_finess("750123456", active_only=True)
+
+    assert "active=true" in str(route.calls[0].request.url)

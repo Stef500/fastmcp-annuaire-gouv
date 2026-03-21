@@ -30,4 +30,9 @@ ENV PYTHONPATH="/app/src"
 
 USER appuser
 
+# Health check for HTTP transport mode (MCP_TRANSPORT=http).
+# Not applicable for stdio transport (default).
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD python -c "import urllib.request, os; urllib.request.urlopen('http://localhost:' + os.getenv('MCP_PORT', '8000') + '/health')" 2>/dev/null || exit 1
+
 ENTRYPOINT ["python", "-m", "annuaire_mcp.main"]

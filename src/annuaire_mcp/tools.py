@@ -187,11 +187,17 @@ def register_tools(mcp: FastMCP, client: FhirClient, geocoder: NominatimClient) 
         return result
 
     @mcp.tool()
-    async def get_establishment_by_finess(finess_id: str) -> dict:
+    async def get_establishment_by_finess(
+        finess_id: str,
+        active_only: bool = False,
+    ) -> dict:
         """Retrieve a single health establishment by its FINESS number.
 
         Args:
             finess_id: The 9-digit FINESS geographic entity identifier.
+            active_only: If True, return an error if the establishment is inactive.
+                         Defaults to False so that inactive establishments are still
+                         retrievable (useful for auditing or history).
 
         Returns:
             A dict representing the establishment, or an error message if
@@ -202,7 +208,9 @@ def register_tools(mcp: FastMCP, client: FhirClient, geocoder: NominatimClient) 
                 "error": f"Invalid FINESS id '{finess_id}'. Expected exactly 9 digits."
             }
         try:
-            result = await client.get_organization_by_finess(finess_id)
+            result = await client.get_organization_by_finess(
+                finess_id, active_only=active_only
+            )
         except httpx.HTTPStatusError as exc:
             return {
                 "error": f"Health directory API returned HTTP {exc.response.status_code}."

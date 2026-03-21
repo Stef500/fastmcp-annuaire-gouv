@@ -84,6 +84,18 @@ docker compose -f docker-compose.ghcr.yml pull
 docker compose -f docker-compose.ghcr.yml up
 ```
 
+## Health check (HTTP transport)
+
+When running with `MCP_TRANSPORT=http`, a `GET /health` endpoint is available:
+
+```bash
+curl http://localhost:8000/health
+# {"status": "ok", "service": "annuaire-sante"}
+```
+
+The Docker image includes a `HEALTHCHECK` directive that polls this endpoint automatically.
+For stdio transport (default), the health check directive has no effect and can be ignored.
+
 ## GitHub Actions — automated build and push
 
 The workflow in `.github/workflows/docker-publish.yml` runs on every push to

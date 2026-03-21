@@ -27,7 +27,7 @@ LLM / MCP client (Claude Desktop, etc.)
 | `main.py` | Creates the `FastMCP` instance, instantiates shared clients, registers tools, manages lifespan |
 | `tools.py` | Declares the four MCP tools exposed to the LLM |
 | `client.py` | Wraps `httpx.AsyncClient` to call the FHIR API; parses FHIR resources; retries on 429/503/timeout |
-| `geocoder.py` | Nominatim geocoding client: forward (`geocode_address`) and reverse (`reverse_geocode_postal`); in-process cache; 1 req/s rate limit |
+| `geocoder.py` | Nominatim geocoding client: forward (`geocode_address`) and reverse (`reverse_geocode_postal`); in-process LRU-style cache (bounded at 1 000 entries); 1 req/s rate limit |
 | `models.py` | Pydantic models (`Establishment`, `SearchResult`, `Address`, `Telecom`) |
 | `categories.py` | Maps human-readable category keys to FINESS codes and builds FHIR type tokens |
 | `config.py` | `pydantic-settings` `Settings` class; `SecretStr` API key; reads from `.env` |
@@ -60,4 +60,6 @@ LLM / MCP client (Claude Desktop, etc.)
 - HTTP timeouts are enforced on both the FHIR client and the Nominatim client.
 - The FHIR client retries automatically (exponential backoff, up to 3 attempts) on 429, 503, and timeout responses.
 - The Nominatim client enforces the 1 req/s usage policy via an asyncio lock.
+- The reverse-geocoding cache is bounded to 1 000 entries (FIFO eviction) to avoid unbounded memory growth in long-running deployments.
 - `max_results` is capped by the server-side setting to prevent large payloads.
+- A `GET /health` endpoint is available in HTTP transport mode (`MCP_TRANSPORT=http`) and returns `{"status": "ok", "service": "annuaire-sante"}`. The Docker image ships with a matching `HEALTHCHECK` directive.

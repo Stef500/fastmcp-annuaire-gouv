@@ -6,6 +6,8 @@ from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
 from fastmcp import FastMCP
+from starlette.requests import Request
+from starlette.responses import JSONResponse
 
 from annuaire_mcp.client import FhirClient
 from annuaire_mcp.config import get_settings
@@ -38,6 +40,12 @@ mcp = FastMCP(
 )
 
 register_tools(mcp, _fhir_client, _nominatim_client)
+
+
+@mcp.custom_route("/health", methods=["GET"])
+async def health_check(request: Request) -> JSONResponse:
+    """Health check endpoint for HTTP transport mode."""
+    return JSONResponse({"status": "ok", "service": "annuaire-sante"})
 
 
 def run() -> None:

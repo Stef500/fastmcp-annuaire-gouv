@@ -108,9 +108,10 @@ Retrieve a single establishment by its FINESS number.
 
 **Parameters:**
 
-| Name | Type | Required | Description |
-|---|---|---|---|
-| `finess_id` | string | yes | 9-digit FINESS geographic entity identifier |
+| Name | Type | Required | Default | Description |
+|---|---|---|---|---|
+| `finess_id` | string | yes | - | 9-digit FINESS geographic entity identifier |
+| `active_only` | bool | no | false | If true, returns an error when the establishment is inactive. Defaults to false so that inactive establishments remain retrievable (useful for auditing). |
 
 **Returns:** An `Establishment` object, or `{"error": "..."}` if not found.
 
